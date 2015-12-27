@@ -55,11 +55,10 @@ type RayTraceConfig struct {
 }
 
 type World struct {
-	Cam *Camera
-	Img draw.Image // use the draw interface
-	//    Obj []Objects
-	Config RayTraceConfig
-	sphere *Sphere
+	Cam     *Camera
+	Img     draw.Image // use the draw interface
+	Config  RayTraceConfig
+	Objects []Object
 }
 
 func NewWorld() *World {
@@ -69,31 +68,27 @@ func NewWorld() *World {
 	org := vec.MakeVec3(0, 0, 0)
 
 	center := vec.MakeVec3(0, 0, -4)
-	sphere := Sphere{*center, 1, color.RGBA{255, 255, 255, 1}, 1}
 
 	world.Cam = MakePerspectiveCamera(*org, *dir, 640, 480, 45, 45)
-	//world.Cam = CameraPerspective{*org, *dir}
 	world.Config = RayTraceConfig{true, true, 1}
 	world.Img = image.NewRGBA(image.Rect(0, 0, world.Cam.Width, world.Cam.Height))
-	world.sphere = &sphere
-	//    world.Obj = nil // TODO: vec.Make objects
+
+	sphere := Sphere{*center, 1, color.RGBA{0, 0, 255, 1}, 1}
+	world.Objects = make([]Object, 1)
+	world.Objects[0] = Object(sphere)
 
 	return world
 }
 
 func (w World) traceRay(ray Ray) color.RGBA {
 	//isHit, hit, n, t0, t1 := w.sphere.Intersects(ray)
-	isHit, _, _, _, _ := w.sphere.Intersects(ray)
-	if isHit {
-		return w.sphere.Col
+	for _, obj := range w.Objects {
+		isHit, _, _, _, _ := obj.Intersects(ray)
+		if isHit {
+			return obj.GetColor()
+		}
 	}
 	return color.RGBA{0, 0, 0, 0}
-}
-
-func (w World) MakeRay() {
-	// generates a vector3 that is assumed
-	// have an origin at (0,0,0)
-	//return Ray{Vec3{}, Vec3{}}
 }
 
 func (w *World) Trace() {
@@ -122,7 +117,7 @@ func (w *World) Trace() {
 
 type Object interface {
 	Intersects(Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
-	GetColor() color.Color
+	GetColor() color.RGBA
 }
 
 type Sphere struct {
@@ -191,6 +186,10 @@ func (s Sphere) Intersects(ray Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
 	*/
 
 	return true, hit, n, t0, t1
+}
+
+func (s Sphere) GetColor() color.RGBA {
+	return s.Col
 }
 
 func main() {
