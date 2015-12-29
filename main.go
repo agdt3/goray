@@ -97,7 +97,7 @@ func (w World) makeCameraRay(x, y int) Ray {
 	return ray
 }
 
-func (w World) makeRefractionRay(ray Ray, hit, n vec.Vec3, obj Object) Ray {
+func (w World) makeRefractionRay(ray Ray, hit, n vec.Vec3, obj Object) (Ray, bool) {
 	InvN := vec.Invert(n)
 	I := ray.Direction
 	/*
@@ -121,14 +121,17 @@ func (w World) makeRefractionRay(ray Ray, hit, n vec.Vec3, obj Object) Ray {
 
 	isHit, nhit, _, _, _ := obj.Intersects(internalRay)
 	var nray Ray
+	nerr := false
 	if isHit {
+		fmt.Println("Something hit!")
 		// TODO: This is wrong, need a new direction
 		nray = Ray{"refraction", nhit, internalRay.Direction}
 	} else {
-		fmt.Println("Error - Internal ray should hit")
+		//fmt.Println("Error - Internal ray should hit")
 		nray = Ray{"failed", *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0)}
+		nerr = true
 	}
-	return nray
+	return nray, nerr
 }
 
 func (w World) traceRay(ray Ray) color.RGBA {
@@ -145,8 +148,13 @@ func (w World) traceRay(ray Ray) color.RGBA {
 				closest_dist = new_dist
 				if w.Config.UseRefraction &&
 					obj.GetRefractiveIndex() > w.RefractiveIndex {
-					refRay := w.makeRefractionRay(ray, hit, n, obj)
-					pixel_color = w.traceRay(refRay)
+					refRay, err := w.makeRefractionRay(ray, hit, n, obj)
+					if !err {
+						pixel_color = BlendColors(obj.GetColor(), w.traceRay(refRay), 0.5)
+						fmt.Println("blended colors")
+						fmt.Println(pixel_color)
+					}
+					pixel_color = obj.GetColor()
 				} else {
 					pixel_color = obj.GetColor()
 				}
@@ -272,9 +280,25 @@ func (s Sphere) GetRefractiveIndex() float64 {
 func BlendColors(c1, c2 color.RGBA, t float64) color.RGBA {
 	c3 := color.RGBA{0, 0, 0, 0}
 	// TODO: Use bitwise manipulation here instead
-	c3.R = uint8(math.Sqrt((1-t)*float64(c1.R*c1.R) + t*float64(c2.R*c2.R)))
-	c3.G = uint8(math.Sqrt((1-t)*float64(c1.G*c1.G) + t*float64(c2.G*c2.G)))
-	c3.B = uint8(math.Sqrt((1-t)*float64(c1.B*c1.B) + t*float64(c2.B*c2.B)))
+	c1R16 := uint16(c1.R)
+	c1G16 := uint16(c1.G)
+	c1B16 := uint16(c1.B)
+
+	c2R16 := uint16(c2.R)
+	c2G16 := uint16(c2.G)
+	c2B16 := uint16(c2.B)
+
+	c1RSQ := float64(c1R16 * c1R16)
+	c1GSQ := float64(c1G16 * c1G16)
+	c1BSQ := float64(c1B16 * c1B16)
+
+	c2RSQ := float64(c2R16 * c2R16)
+	c2GSQ := float64(c2G16 * c2G16)
+	c2BSQ := float64(c2B16 * c2B16)
+
+	c3.R = uint8(math.Sqrt((1.0-t)*c1RSQ + t*c2RSQ))
+	c3.G = uint8(math.Sqrt((1.0-t)*c1GSQ + t*c2GSQ))
+	c3.B = uint8(math.Sqrt((1.0-t)*c1BSQ + t*c2BSQ))
 	c3.A = uint8(((1 - t) * float64(c1.A)) + (t * float64(c2.A)))
 	return c3
 }
