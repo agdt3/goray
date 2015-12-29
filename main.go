@@ -51,44 +51,83 @@ func (c Camera) ConvertPosToPixel(x, y int) (float64, float64) {
 type RayTraceConfig struct {
 	UseLight       bool
 	UseShadows     bool
+	UseRefraction  bool
 	MaxReflections uint
 }
 
 type World struct {
-	Cam     *Camera
-	Img     draw.Image // use the draw interface
-	Config  RayTraceConfig
-	Objects []Object
+	Cam             *Camera
+	Img             draw.Image // use the draw interface
+	Config          RayTraceConfig
+	Objects         []Object
+	RefractiveIndex float64
 }
 
-func NewWorld() *World {
+func MakeWorld() *World {
 	// World with sane defaults
 	world := new(World)
 	dir := vec.MakeVec3(0, 0, -1)
 	org := vec.MakeVec3(0, 0, 0)
 
-	center := vec.MakeVec3(0, 0, -4)
-
 	world.Cam = MakePerspectiveCamera(*org, *dir, 640, 480, 45, 45)
-	world.Config = RayTraceConfig{true, true, 1}
+	world.Config = RayTraceConfig{true, true, false, 1}
 	world.Img = image.NewRGBA(image.Rect(0, 0, world.Cam.Width, world.Cam.Height))
-
-	sphere := Sphere{*center, 1, color.RGBA{0, 0, 255, 1}, 1}
-	world.Objects = make([]Object, 1)
-	world.Objects[0] = Object(sphere)
-
+	world.RefractiveIndex = 1
+	world.addObjects()
 	return world
+}
+
+func (w *World) addObjects() {
+	center1 := vec.MakeVec3(0, 0, -4)
+	center2 := vec.MakeVec3(2, 0, -5)
+	sphere1 := Sphere{*center1, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
+	sphere2 := Sphere{*center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
+
+	w.Objects = make([]Object, 2)
+	w.Objects[0] = Object(sphere2)
+	w.Objects[1] = Object(sphere1)
+}
+
+func (w World) makeRefractionRay(ray Ray, hit, n vec.Vec3, obj Object) Ray {
+	InvN := vec.Invert(n)
+	I := ray.Direction
+	/*
+		cosTheta := vec.Dot(ray.Direction, invN) / (ray.Magnitude * invN.Magnitude)
+		theta1 := math.Acos(cosTheta)
+
+		sinTheta2 := w.RefractiveIndex / obj.RefractiveIndex * math.Sin(theta1)
+		theta2 := math.Asin(sinTheta2)
+	*/
+	// TODO: Figure out how to make outgoing ray, deal with total internal
+	// refraction
+	// total internal reflection occurs when n2 < n1, so we can ignore this
+	// for now
+	r := w.RefractiveIndex / obj.GetRefractiveIndex()
+	c := vec.Dot(InvN, I)
+	v1 := vec.Multiply(I, r)
+	modifier := (r * c) - math.Sqrt(1-((r*r)*(1-(c*c))))
+	v2 := vec.Multiply(n, modifier)
+	vr := vec.Add(v1, v2)
+	return Ray{"refraction", hit, vr}
 }
 
 func (w World) traceRay(ray Ray) color.RGBA {
 	//isHit, hit, n, t0, t1 := w.sphere.Intersects(ray)
+	var closest_dist float64
+	closest_dist = 1000
+	pixel_color := color.RGBA{0, 0, 0, 0}
+
 	for _, obj := range w.Objects {
-		isHit, _, _, _, _ := obj.Intersects(ray)
+		isHit, _, _, t0, _ := obj.Intersects(ray)
 		if isHit {
-			return obj.GetColor()
+			new_dist := math.Abs(t0)
+			if new_dist < closest_dist {
+				closest_dist = new_dist
+				pixel_color = obj.GetColor()
+			}
 		}
 	}
-	return color.RGBA{0, 0, 0, 0}
+	return pixel_color
 }
 
 func (w *World) Trace() {
@@ -118,13 +157,15 @@ func (w *World) Trace() {
 type Object interface {
 	Intersects(Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
 	GetColor() color.RGBA
+	GetRefractiveIndex() float64
 }
 
 type Sphere struct {
-	Center         vec.Vec3
-	Radius         float64
-	Col            color.RGBA
-	EasingDistance float64
+	Center          vec.Vec3
+	Radius          float64
+	Col             color.RGBA
+	EasingDistance  float64
+	RefractiveIndex float64
 }
 
 func (s Sphere) Intersects(ray Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
@@ -157,19 +198,29 @@ func (s Sphere) Intersects(ray Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
 		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
 	}
 
-	// if the origin is inside the sphere of light, it counts as a hit
-	// the results aren't that useful
-	if l2oc < srsq {
-		t0 := float64(0)
-		t1 := float64(0)
-		hit := ray.Origin
-		oc.Multiply(-1)
-		return true, hit, oc, t0, t1
-	}
+	// If the origin is inside the sphere of light, it counts as a hit
+	// This is a useful result if the ray is refracted inside the sphere
+	/*
+		if l2oc < srsq {
+			// TODO: These numbers make no sense
+			t0 := float64(0)
+			t1 := float64(0)
+			hit := ray.Origin
+			oc.Multiply(-1)
+			return true, hit, oc, t0, t1
+		}
+	*/
 
 	thc := math.Sqrt(t2hc)
 	t0 := t_ca - thc
 	t1 := t_ca + thc
+
+	// Swap if reversed
+	if t0 > t1 {
+		tmp := t0
+		t0 = t1
+		t1 = tmp
+	}
 
 	dist := s.EasingDistance * t0
 	rd.Multiply(dist)
@@ -192,7 +243,11 @@ func (s Sphere) GetColor() color.RGBA {
 	return s.Col
 }
 
+func (s Sphere) GetRefractiveIndex() float64 {
+	return s.RefractiveIndex
+}
+
 func main() {
-	world := NewWorld()
+	world := MakeWorld()
 	world.Trace()
 }

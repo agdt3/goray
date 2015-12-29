@@ -77,6 +77,16 @@ func Subtract(v1, v2 Vec3) Vec3 {
 	return *v3
 }
 
+func Multiply(v1 Vec3, scalar float64) Vec3 {
+	v2 := MakeVec3(v1.X*scalar, v1.Y*scalar, v1.Z*scalar)
+	return *v2
+}
+
+func Divide(v1 Vec3, scalar float64) Vec3 {
+	v2 := MakeVec3(v1.X/scalar, v1.Y/scalar, v1.Z/scalar)
+	return *v2
+}
+
 func Dot(v1, v2 Vec3) float64 {
 	return (v1.X * v2.X) + (v1.Y * v2.Y) + (v1.Z * v2.Z)
 }
@@ -87,6 +97,11 @@ func Cross(v1, v2 Vec3) Vec3 {
 	zc := (v1.X * v2.Y) - (v1.Y * v2.X)
 	v3 := MakeVec3(xc, yc, zc)
 	return *v3
+}
+
+func Invert(v1 Vec3) Vec3 {
+	v2 := MakeVec3(-1*v1.X, -1*v1.Y, -1*v1.Z)
+	return *v2
 }
 
 func IsEqual(v1, v2 Vec3) bool {
