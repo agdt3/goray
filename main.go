@@ -70,7 +70,7 @@ func MakeWorld() *World {
 	org := vec.MakeVec3(0, 0, 0)
 
 	world.Cam = MakePerspectiveCamera(*org, *dir, 640, 480, 45, 45)
-	world.Config = RayTraceConfig{true, true, false, 1}
+	world.Config = RayTraceConfig{true, true, true, 1}
 	world.Img = image.NewRGBA(image.Rect(0, 0, world.Cam.Width, world.Cam.Height))
 	world.RefractiveIndex = 1
 	world.addObjects()
@@ -86,6 +86,15 @@ func (w *World) addObjects() {
 	w.Objects = make([]Object, 2)
 	w.Objects[0] = Object(sphere2)
 	w.Objects[1] = Object(sphere1)
+}
+
+func (w World) makeCameraRay(x, y int) Ray {
+	px, py := w.Cam.ConvertPosToPixel(x, y)
+	origin := vec.MakeVec3(0, 0, 0)
+	dir := vec.MakeVec3(px, py, -1)
+	dir.Normalize()
+	ray := Ray{"camera", *origin, *dir}
+	return ray
 }
 
 func (w World) makeRefractionRay(ray Ray, hit, n vec.Vec3, obj Object) Ray {
@@ -108,22 +117,39 @@ func (w World) makeRefractionRay(ray Ray, hit, n vec.Vec3, obj Object) Ray {
 	modifier := (r * c) - math.Sqrt(1-((r*r)*(1-(c*c))))
 	v2 := vec.Multiply(n, modifier)
 	vr := vec.Add(v1, v2)
-	return Ray{"refraction", hit, vr}
+	internalRay := Ray{"refraction", hit, vr}
+
+	isHit, nhit, _, _, _ := obj.Intersects(internalRay)
+	var nray Ray
+	if isHit {
+		// TODO: This is wrong, need a new direction
+		nray = Ray{"refraction", nhit, internalRay.Direction}
+	} else {
+		fmt.Println("Error - Internal ray should hit")
+		nray = Ray{"failed", *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0)}
+	}
+	return nray
 }
 
 func (w World) traceRay(ray Ray) color.RGBA {
 	//isHit, hit, n, t0, t1 := w.sphere.Intersects(ray)
 	var closest_dist float64
-	closest_dist = 1000
+	closest_dist = 100000
 	pixel_color := color.RGBA{0, 0, 0, 0}
 
 	for _, obj := range w.Objects {
-		isHit, _, _, t0, _ := obj.Intersects(ray)
+		isHit, hit, n, t0, _ := obj.Intersects(ray)
 		if isHit {
 			new_dist := math.Abs(t0)
 			if new_dist < closest_dist {
 				closest_dist = new_dist
-				pixel_color = obj.GetColor()
+				if w.Config.UseRefraction &&
+					obj.GetRefractiveIndex() > w.RefractiveIndex {
+					refRay := w.makeRefractionRay(ray, hit, n, obj)
+					pixel_color = w.traceRay(refRay)
+				} else {
+					pixel_color = obj.GetColor()
+				}
 			}
 		}
 	}
@@ -135,17 +161,13 @@ func (w *World) Trace() {
 	fmt.Println(b)
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
-			px, py := w.Cam.ConvertPosToPixel(x, y)
-			origin := vec.MakeVec3(0, 0, 0)
-			dir := vec.MakeVec3(px, py, -1)
-			dir.Normalize()
-			ray := Ray{"camera", *origin, *dir}
+			ray := w.makeCameraRay(x, y)
 			pixelColor := w.traceRay(ray)
 			w.Img.Set(x, w.Cam.Height-y, pixelColor)
 		}
 	}
 
-	// TODO: Get rid of this later
+	// TODO: Export to function later
 	f, err := os.Create("./test.jpg")
 	if err != nil {
 		fmt.Println(err)
@@ -245,6 +267,16 @@ func (s Sphere) GetColor() color.RGBA {
 
 func (s Sphere) GetRefractiveIndex() float64 {
 	return s.RefractiveIndex
+}
+
+func BlendColors(c1, c2 color.RGBA, t float64) color.RGBA {
+	c3 := color.RGBA{0, 0, 0, 0}
+	// TODO: Use bitwise manipulation here instead
+	c3.R = uint8(math.Sqrt((1-t)*float64(c1.R*c1.R) + t*float64(c2.R*c2.R)))
+	c3.G = uint8(math.Sqrt((1-t)*float64(c1.G*c1.G) + t*float64(c2.G*c2.G)))
+	c3.B = uint8(math.Sqrt((1-t)*float64(c1.B*c1.B) + t*float64(c2.B*c2.B)))
+	c3.A = uint8(((1 - t) * float64(c1.A)) + (t * float64(c2.A)))
+	return c3
 }
 
 func main() {
