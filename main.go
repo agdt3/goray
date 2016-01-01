@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/agdt3/goray/cam"
+	"github.com/agdt3/goray/obj"
 	"github.com/agdt3/goray/vec"
 	"image"
 	"image/color"
@@ -11,43 +13,6 @@ import (
 	"os"
 )
 
-type Ray struct {
-	Type      string
-	Origin    vec.Vec3
-	Direction vec.Vec3
-}
-
-type Camera struct {
-	Origin      vec.Vec3
-	Dir         vec.Vec3
-	Width       int
-	Height      int
-	FOVX        float64
-	FOVY        float64
-	AspectRatio float64
-	Angle       float64
-}
-
-func MakePerspectiveCamera(org, dir vec.Vec3, w, h int, fovx, fovy float64) *Camera {
-	cam := new(Camera)
-	cam.Origin = org
-	cam.Dir = dir
-	cam.Width = w
-	cam.Height = h
-	cam.FOVX = fovx
-	cam.FOVY = fovy
-	cam.AspectRatio = float64(w) / float64(h)
-	cam.Angle = math.Tan((fovx * 0.5) / 57.296) // convert degree to radians
-
-	return cam
-}
-
-func (c Camera) ConvertPosToPixel(x, y int) (float64, float64) {
-	px := (2.0*((float64(x)+0.5)/float64(c.Width)) - 1.0) * c.Angle * c.AspectRatio
-	py := (1.0 - 2.0*((float64(y)+0.5)/float64(c.Height))) * c.Angle
-	return px, py
-}
-
 type RayTraceConfig struct {
 	UseLight       bool
 	UseShadows     bool
@@ -56,7 +21,7 @@ type RayTraceConfig struct {
 }
 
 type World struct {
-	Cam             *Camera
+	Cam             *cam.Camera
 	Img             draw.Image // use the draw interface
 	Config          RayTraceConfig
 	Objects         []Object
@@ -69,7 +34,7 @@ func MakeWorld() *World {
 	dir := vec.MakeVec3(0, 0, -1)
 	org := vec.MakeVec3(0, 0, 0)
 
-	world.Cam = MakePerspectiveCamera(*org, *dir, 640, 480, 45, 45)
+	world.Cam = cam.MakePerspectiveCamera(*org, *dir, 640, 480, 45, 45)
 	world.Config = RayTraceConfig{true, true, true, 1}
 	world.Img = image.NewRGBA(image.Rect(0, 0, world.Cam.Width, world.Cam.Height))
 	world.RefractiveIndex = 1
@@ -79,34 +44,29 @@ func MakeWorld() *World {
 
 func (w *World) addObjects() {
 	center1 := vec.MakeVec3(0, 0, -4)
-	center2 := vec.MakeVec3(2, 0, -5)
-	sphere1 := Sphere{*center1, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
-	sphere2 := Sphere{*center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
+	center2 := vec.MakeVec3(0.5, 0, -5)
+	sphere1 := obj.Sphere{*center1, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
+	sphere2 := obj.Sphere{*center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
 
 	w.Objects = make([]Object, 2)
-	w.Objects[0] = Object(sphere2)
-	w.Objects[1] = Object(sphere1)
+	w.Objects[0] = Object(sphere1)
+	w.Objects[1] = Object(sphere2)
 }
 
-func (w World) makeCameraRay(x, y int) Ray {
+func (w World) makeCameraRay(x, y int) cam.Ray {
 	px, py := w.Cam.ConvertPosToPixel(x, y)
 	origin := vec.MakeVec3(0, 0, 0)
 	dir := vec.MakeVec3(px, py, -1)
 	dir.Normalize()
-	ray := Ray{"camera", *origin, *dir}
+	ray := cam.Ray{"camera", *origin, *dir}
 	return ray
 }
 
-func (w World) makeRefractionRay(ray Ray, hit, n vec.Vec3, obj Object) (Ray, bool) {
+func (w World) makeRefractionRay(ray cam.Ray, hit, n vec.Vec3, obj Object) (cam.Ray, bool) {
+	fmt.Println("incoming ray")
+	fmt.Println(ray)
 	InvN := vec.Invert(n)
 	I := ray.Direction
-	/*
-		cosTheta := vec.Dot(ray.Direction, invN) / (ray.Magnitude * invN.Magnitude)
-		theta1 := math.Acos(cosTheta)
-
-		sinTheta2 := w.RefractiveIndex / obj.RefractiveIndex * math.Sin(theta1)
-		theta2 := math.Asin(sinTheta2)
-	*/
 	// TODO: Figure out how to make outgoing ray, deal with total internal
 	// refraction
 	// total internal reflection occurs when n2 < n1, so we can ignore this
@@ -117,24 +77,37 @@ func (w World) makeRefractionRay(ray Ray, hit, n vec.Vec3, obj Object) (Ray, boo
 	modifier := (r * c) - math.Sqrt(1-((r*r)*(1-(c*c))))
 	v2 := vec.Multiply(n, modifier)
 	vr := vec.Add(v1, v2)
-	internalRay := Ray{"refraction", hit, vr}
+	internalRay := cam.Ray{"refraction", hit, vr}
 
-	isHit, nhit, _, _, _ := obj.Intersects(internalRay)
-	var nray Ray
-	nerr := false
-	if isHit {
-		fmt.Println("Something hit!")
-		// TODO: This is wrong, need a new direction
-		nray = Ray{"refraction", nhit, internalRay.Direction}
-	} else {
-		//fmt.Println("Error - Internal ray should hit")
-		nray = Ray{"failed", *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0)}
-		nerr = true
-	}
-	return nray, nerr
+	nisHit, nhit, nn, nt0, nt1 := obj.Intersects(internalRay)
+	/*
+		if nisHit {
+			fmt.Println("internal hit result")
+			fmt.Println(nhit)
+			fmt.Println(nn)
+			fmt.Println(nt0)
+			fmt.Println(nt1)
+		}
+	*/
+	return internalRay, false
+	/*
+		isHit, nhit, _, _, _ := obj.Intersects(internalRay)
+		var nray cam.Ray
+		nerr := false
+		if isHit {
+			fmt.Println("Something hit!")
+			// TODO: This is wrong, need a new direction
+			nray = cam.Ray{"refraction", nhit, ray.Direction}
+		} else {
+			//fmt.Println("Error - Internal ray should hit")
+			nray = cam.Ray{"failed", *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0)}
+			nerr = true
+		}
+		return nray, nerr
+	*/
 }
 
-func (w World) traceRay(ray Ray) color.RGBA {
+func (w World) traceRay(ray cam.Ray) color.RGBA {
 	//isHit, hit, n, t0, t1 := w.sphere.Intersects(ray)
 	var closest_dist float64
 	closest_dist = 100000
@@ -150,9 +123,14 @@ func (w World) traceRay(ray Ray) color.RGBA {
 					obj.GetRefractiveIndex() > w.RefractiveIndex {
 					refRay, err := w.makeRefractionRay(ray, hit, n, obj)
 					if !err {
-						pixel_color = BlendColors(obj.GetColor(), w.traceRay(refRay), 0.5)
-						fmt.Println("blended colors")
-						fmt.Println(pixel_color)
+						refColor := w.traceRay(refRay)
+						if refColor.R != 0 && refColor.G != 0 && refColor.B != 0 {
+							pixel_color = BlendColors(obj.GetColor(), refColor, 0.5)
+						} else {
+							pixel_color = obj.GetColor()
+						}
+						//fmt.Println("blended colors")
+						//fmt.Println(pixel_color)
 					}
 					pixel_color = obj.GetColor()
 				} else {
@@ -185,96 +163,9 @@ func (w *World) Trace() {
 }
 
 type Object interface {
-	Intersects(Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
+	Intersects(cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
 	GetColor() color.RGBA
 	GetRefractiveIndex() float64
-}
-
-type Sphere struct {
-	Center          vec.Vec3
-	Radius          float64
-	Col             color.RGBA
-	EasingDistance  float64
-	RefractiveIndex float64
-}
-
-func (s Sphere) Intersects(ray Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
-	sc := s.Center
-	rd := ray.Direction
-	rd.Normalize()
-
-	srsq := s.Radius * s.Radius
-	oc := vec.Subtract(sc, rd)
-	l2oc := vec.Dot(oc, oc)
-	t_ca := vec.Dot(oc, rd)
-
-	//sphere located behind ray origin
-	if t_ca < 0 {
-		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
-	}
-
-	d2 := l2oc - (t_ca * t_ca)
-
-	// if the distance between the closest point to the sphere center on
-	// the projected ray is greater than the radius, then the projected
-	// ray is definitely outside the bounds of the sphere
-	if d2 > srsq {
-		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
-	}
-
-	t2hc := srsq - d2
-
-	if t2hc < 0 {
-		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
-	}
-
-	// If the origin is inside the sphere of light, it counts as a hit
-	// This is a useful result if the ray is refracted inside the sphere
-	/*
-		if l2oc < srsq {
-			// TODO: These numbers make no sense
-			t0 := float64(0)
-			t1 := float64(0)
-			hit := ray.Origin
-			oc.Multiply(-1)
-			return true, hit, oc, t0, t1
-		}
-	*/
-
-	thc := math.Sqrt(t2hc)
-	t0 := t_ca - thc
-	t1 := t_ca + thc
-
-	// Swap if reversed
-	if t0 > t1 {
-		tmp := t0
-		t0 = t1
-		t1 = tmp
-	}
-
-	dist := s.EasingDistance * t0
-	rd.Multiply(dist)
-	hit := vec.Add(ray.Origin, rd)
-
-	n := vec.Subtract(hit, sc)
-	n.Divide(s.Radius)
-
-	/*
-		fmt.Println(hit)
-		fmt.Println(n)
-		fmt.Println(t0)
-		fmt.Println(t1)
-	*/
-
-	return true, hit, n, t0, t1
-}
-
-func (s Sphere) GetColor() color.RGBA {
-	return s.Col
-}
-
-func (s Sphere) GetRefractiveIndex() float64 {
-	return s.RefractiveIndex
 }
 
 func BlendColors(c1, c2 color.RGBA, t float64) color.RGBA {

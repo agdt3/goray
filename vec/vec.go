@@ -1,6 +1,7 @@
 package vec
 
 import (
+	"fmt"
 	"math"
 )
 
@@ -63,7 +64,21 @@ func (v Vec3) CalculateMagnitude() (float64, float64) {
 			(v.Y * v.Y) +
 			(v.Z * v.Z))
 
-	return mag, 1 / mag
+	// prevent division by zero
+	var inv_mag float64
+	if mag != 0 {
+		inv_mag = 1 / mag
+	} else {
+		inv_mag = 0
+	}
+
+	return mag, inv_mag
+}
+
+func (v Vec3) String() string {
+	return fmt.Sprintf(
+		"Vec3: XYZ(%v, %v, %v) - Magnitude(%v)",
+		v.X, v.Y, v.Z, v.Magnitude)
 }
 
 /* Utils */
