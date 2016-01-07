@@ -19,6 +19,22 @@ func (r Ray) String() string {
 		r.Direction.X, r.Direction.Y, r.Direction.Z)
 }
 
+func IsEqual(r1, r2 Ray) bool {
+	if r1.Type != r2.Type {
+		return false
+	}
+
+	if !vec.IsEqual(r1.Origin, r2.Origin) {
+		return false
+	}
+
+	if !vec.IsEqual(r1.Direction, r2.Direction) {
+		return false
+	}
+
+	return true
+}
+
 type Camera struct {
 	Origin      vec.Vec3
 	Dir         vec.Vec3

@@ -8,6 +8,7 @@ import (
 )
 
 type Sphere struct {
+	Id              string
 	Center          vec.Vec3
 	Radius          float64
 	Col             color.RGBA
@@ -65,8 +66,8 @@ func (s Sphere) Intersects(ray cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, floa
 	// Sphere is behind the point of origin
 	if t0 < 0 && t1 < 0 {
 		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
-	} else if t0 < 0 && t1 > 0 {
-		// Point of origin is inside the sphere
+	} else if t0 <= 0 && t1 > 0 {
+		// Point of origin is inside the sphere or on/inside the surface
 		t0 = t1
 	}
 
