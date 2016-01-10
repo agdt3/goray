@@ -4,9 +4,9 @@ import (
 	"testing"
 )
 
-func TestMakeVec3(t *testing.T) {
+func TestNewVec3(t *testing.T) {
 	t.Parallel()
-	v3 := MakeVec3(1, 4, 8)
+	v3 := NewVec3(1, 4, 8)
 
 	if v3.X != 1 || v3.Y != 4 || v3.Z != 8 {
 		t.Error("Vector did not initialize correctly")
@@ -19,8 +19,8 @@ func TestMakeVec3(t *testing.T) {
 
 func TestDot(t *testing.T) {
 	t.Parallel()
-	v1 := MakeVec3(1, 2, 3)
-	v2 := MakeVec3(4, 5, 6)
+	v1 := NewVec3(1, 2, 3)
+	v2 := NewVec3(4, 5, 6)
 
 	dp := Dot(*v1, *v2)
 	if dp != 32 {
@@ -30,9 +30,9 @@ func TestDot(t *testing.T) {
 
 func TestCross(t *testing.T) {
 	t.Parallel()
-	i := MakeVec3(1, 0, 0)
-	j := MakeVec3(0, 1, 0)
-	k := MakeVec3(0, 0, 1)
+	i := NewVec3(1, 0, 0)
+	j := NewVec3(0, 1, 0)
+	k := NewVec3(0, 0, 1)
 
 	v1 := Cross(*i, *j)
 	if v1.X != 0 || v1.Y != 0 || v1.Z != 1 {

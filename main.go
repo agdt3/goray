@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/agdt3/goray/cam"
 	"github.com/agdt3/goray/obj"
+	//"github.com/agdt3/goray/track"
 	"github.com/agdt3/goray/vec"
 	"image"
 	"image/color"
@@ -29,47 +30,48 @@ type World struct {
 	Cam             *cam.Camera
 	Img             draw.Image // use the draw interface
 	Config          RayTraceConfig
-	Objects         []Object
+	Objects         []obj.Object
 	RefractiveIndex float64
-	Stats           RatioStats
+	Stats           CollisionStats
 }
 
-func MakeWorld() *World {
+func NewWorld() *World {
 	// World with sane defaults
 	world := new(World)
-	dir := vec.MakeVec3(0, 0, -1)
-	org := vec.MakeVec3(0, 0, 0)
+	dir := vec.NewVec3(0, 0, -1)
+	org := vec.NewVec3(0, 0, 0)
 
 	world.Cam = cam.MakePerspectiveCamera(*org, *dir, 640, 480, 45, 45)
 	world.Config = RayTraceConfig{true, true, true, 5}
 	world.Img = image.NewRGBA(image.Rect(0, 0, world.Cam.Width, world.Cam.Height))
 	world.RefractiveIndex = 1
-	world.Stats = RatioStats{0, 0}
+	world.Stats = CollisionStats{0, 0}
 	return world
 }
 
 func (w *World) MakeObjects() {
-	center1 := vec.MakeVec3(0, 0, -4)
-	center2 := vec.MakeVec3(0, 0, -10)
-	sphere1 := obj.Sphere{*center1, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
-	sphere2 := obj.Sphere{*center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
+	center1 := vec.NewVec3(0, 0, -4)
+	center2 := vec.NewVec3(0, 0, -10)
+	sphere1 := obj.Sphere{"Sphere1", *center1, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
+	sphere2 := obj.Sphere{"Sphere2", *center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
 
 	// Known objects
-	w.Objects = make([]Object, 2)
-	w.Objects[0] = Object(sphere1)
-	w.Objects[1] = Object(sphere2)
+	w.Objects = make([]obj.Object, 2)
+	w.Objects[0] = obj.Object(sphere1)
+	w.Objects[1] = obj.Object(sphere2)
 	// Dynamic number
 	//w.Objects = make([]Object, 0)
 	//w.Objects = append(w.Objects, Object(sphere1))
 	//w.Objects = append(w.Objects, Object(sphere2))
 }
 
-func (w World) makeCameraRay(x, y int) cam.Ray {
+func (w World) makeCameraRay(x, y int) *cam.Ray {
 	px, py := w.Cam.ConvertPosToPixel(x, y)
-	origin := vec.MakeVec3(0, 0, 0)
-	dir := vec.MakeVec3(px, py, -1)
+	origin := vec.NewVec3(0, 0, 0)
+	dir := vec.NewVec3(px, py, -1)
 	dir.Normalize()
-	ray := cam.Ray{"camera", *origin, *dir}
+	//ray := cam.Ray{"A", "camera", *origin, *dir}
+	ray := cam.NewRay("", "camera", origin, dir)
 	return ray
 }
 
@@ -93,29 +95,30 @@ func RefractionVector(l, n vec.Vec3, refIndex1, refIndex2 float64) vec.Vec3 {
 	return vr
 }
 
-func (w World) MakeTransmittedRay(ray cam.Ray, hit, n vec.Vec3, obj Object) (cam.Ray, bool) {
+func (w World) MakeTransmittedRay(ray *cam.Ray, hit, n vec.Vec3, object obj.Object) (*cam.Ray, bool) {
 	// TODO:
 	// Deal with total internal refraction. Total internal reflection occurs
 	// when n2 < n1, so we can ignore this for now
 	externalRefIndex := w.RefractiveIndex
-	internalRefIndex := obj.GetRefractiveIndex()
+	internalRefIndex := object.GetRefractiveIndex()
 
 	irv := RefractionVector(ray.Direction, n, externalRefIndex, internalRefIndex)
 	irv.Normalize()
-	internalRay := cam.Ray{"refraction", hit, irv}
-	isHit2, hit2, n2, _, _ := obj.Intersects(internalRay)
+	//internalRay := cam.Ray{"refraction", hit, irv}
+	internalRay := cam.NewRay("", "refraction", &hit, &irv)
+	isHit2, hit2, n2, _, _ := object.Intersects(internalRay)
 	invn2 := vec.Invert(n2)
 	if isHit2 {
 		erv := RefractionVector(irv, invn2, internalRefIndex, externalRefIndex)
 		erv.Normalize()
-		return cam.Ray{"transmission", hit2, erv}, true
+		return cam.NewRay("", "transmission", &hit2, &erv), true
 	} else {
 		fmt.Println("Did not hit object internally")
-		return cam.Ray{"", *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0)}, false
+		return cam.NewRay("noid", "", vec.NewVec3(0, 0, 0), vec.NewVec3(0, 0, 0)), false
 	}
 }
 
-func (w *World) traceRay(ray cam.Ray, reflection uint) (color.RGBA, bool) {
+func (w *World) traceRay(ray *cam.Ray, reflection uint) (color.RGBA, bool) {
 	pixel_color := color.RGBA{0, 0, 0, 0}
 	if reflection > w.Config.MaxReflections {
 		return pixel_color, false
@@ -166,7 +169,7 @@ func (w *World) Trace() {
 		}
 	}
 
-	// TODO: Export to function later
+	// TODO: Export to separate function
 	f, err := os.Create("./test.jpg")
 	if err != nil {
 		fmt.Println(err)
@@ -216,7 +219,7 @@ func BlendColors(c1, c2 color.RGBA, t float64) color.RGBA {
 }
 
 func main() {
-	world := MakeWorld()
+	world := NewWorld()
 	world.MakeObjects()
 	world.Trace()
 	world.ShowStats()

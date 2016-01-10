@@ -7,6 +7,13 @@ import (
 	"math"
 )
 
+type Object interface {
+	GetId() string
+	GetColor() color.RGBA
+	GetRefractiveIndex() float64
+	Intersects(*cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
+}
+
 type Sphere struct {
 	Id              string
 	Center          vec.Vec3
@@ -16,7 +23,7 @@ type Sphere struct {
 	RefractiveIndex float64
 }
 
-func (s Sphere) Intersects(ray cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
+func (s Sphere) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	sc := s.Center
 	rd := ray.Direction
 	rd.Normalize()
@@ -28,7 +35,7 @@ func (s Sphere) Intersects(ray cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, floa
 
 	//sphere located behind ray origin
 	if t_ca < 0 {
-		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
+		return false, *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, 0), 0, 0
 	}
 
 	d2 := l2oc - (t_ca * t_ca)
@@ -37,13 +44,13 @@ func (s Sphere) Intersects(ray cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, floa
 	// the projected ray is greater than the radius, then the projected
 	// ray is definitely outside the bounds of the sphere
 	if d2 > srsq {
-		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
+		return false, *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, 0), 0, 0
 	}
 
 	t2hc := srsq - d2
 
 	if t2hc < 0 {
-		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
+		return false, *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, 0), 0, 0
 	}
 
 	// If the origin is inside the sphere of light, it counts as a hit
@@ -65,7 +72,7 @@ func (s Sphere) Intersects(ray cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, floa
 
 	// Sphere is behind the point of origin
 	if t0 < 0 && t1 < 0 {
-		return false, *vec.MakeVec3(0, 0, 0), *vec.MakeVec3(0, 0, 0), 0, 0
+		return false, *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, 0), 0, 0
 	} else if t0 <= 0 && t1 > 0 {
 		// Point of origin is inside the sphere or on/inside the surface
 		t0 = t1
@@ -94,4 +101,8 @@ func (s Sphere) GetColor() color.RGBA {
 
 func (s Sphere) GetRefractiveIndex() float64 {
 	return s.RefractiveIndex
+}
+
+func (s Sphere) GetId() string {
+	return s.Id
 }

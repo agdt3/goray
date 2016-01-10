@@ -13,7 +13,7 @@ type Vec3 struct {
 	magnitudeInverse float64 // 1/Mag precomputed
 }
 
-func MakeVec3(x, y, z float64) *Vec3 {
+func NewVec3(x, y, z float64) *Vec3 {
 	vec3 := new(Vec3)
 	vec3.X = x
 	vec3.Y = y
@@ -83,22 +83,22 @@ func (v Vec3) String() string {
 
 /* Utils */
 func Add(v1, v2 Vec3) Vec3 {
-	v3 := MakeVec3(v1.X+v2.X, v1.Y+v2.Y, v1.Z+v2.Z)
+	v3 := NewVec3(v1.X+v2.X, v1.Y+v2.Y, v1.Z+v2.Z)
 	return *v3
 }
 
 func Subtract(v1, v2 Vec3) Vec3 {
-	v3 := MakeVec3(v1.X-v2.X, v1.Y-v2.Y, v1.Z-v2.Z)
+	v3 := NewVec3(v1.X-v2.X, v1.Y-v2.Y, v1.Z-v2.Z)
 	return *v3
 }
 
 func Multiply(v1 Vec3, scalar float64) Vec3 {
-	v2 := MakeVec3(v1.X*scalar, v1.Y*scalar, v1.Z*scalar)
+	v2 := NewVec3(v1.X*scalar, v1.Y*scalar, v1.Z*scalar)
 	return *v2
 }
 
 func Divide(v1 Vec3, scalar float64) Vec3 {
-	v2 := MakeVec3(v1.X/scalar, v1.Y/scalar, v1.Z/scalar)
+	v2 := NewVec3(v1.X/scalar, v1.Y/scalar, v1.Z/scalar)
 	return *v2
 }
 
@@ -110,12 +110,12 @@ func Cross(v1, v2 Vec3) Vec3 {
 	xc := (v1.Y * v2.Z) - (v1.Z * v2.Y)
 	yc := (v1.Z * v2.X) - (v1.X * v2.Z)
 	zc := (v1.X * v2.Y) - (v1.Y * v2.X)
-	v3 := MakeVec3(xc, yc, zc)
+	v3 := NewVec3(xc, yc, zc)
 	return *v3
 }
 
 func Invert(v1 Vec3) Vec3 {
-	v2 := MakeVec3(-1*v1.X, -1*v1.Y, -1*v1.Z)
+	v2 := NewVec3(-1*v1.X, -1*v1.Y, -1*v1.Z)
 	return *v2
 }
 

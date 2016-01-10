@@ -3,23 +3,44 @@ package cam
 import (
 	"fmt"
 	"github.com/agdt3/goray/vec"
+	"github.com/satori/go.uuid"
 	"math"
 )
 
 type Ray struct {
+	Id        string
 	Type      string
 	Origin    vec.Vec3
 	Direction vec.Vec3
 }
 
-func (r Ray) String() string {
+func NewRay(id, typ string, orig, dir *vec.Vec3) *Ray {
+	ray := new(Ray)
+	if id == "" {
+		ray.Id = GenerateId()
+	}
+	ray.Type = typ
+	ray.Origin = *orig
+	ray.Direction = *dir
+	return ray
+}
+
+func GenerateId() string {
+	// TODO: Replace with shorter string id manager
+	// Otherwise id chains will be insane
+	id := uuid.NewV4().String()
+	return id
+}
+
+func (r *Ray) String() string {
 	return fmt.Sprintf(
 		"Ray: Type(%v) - Origin(%v, %v, %v) - Dir(%v, %v, %v)",
 		r.Type, r.Origin.X, r.Origin.Y, r.Origin.Z,
 		r.Direction.X, r.Direction.Y, r.Direction.Z)
 }
 
-func IsEqual(r1, r2 Ray) bool {
+func IsEqual(r1, r2 *Ray) bool {
+	// Note: Does not consider Id as unique value
 	if r1.Type != r2.Type {
 		return false
 	}
