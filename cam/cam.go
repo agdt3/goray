@@ -5,6 +5,7 @@ import (
 	"github.com/agdt3/goray/vec"
 	"github.com/satori/go.uuid"
 	"math"
+	"strings"
 )
 
 type Ray struct {
@@ -17,7 +18,9 @@ type Ray struct {
 func NewRay(id, typ string, orig, dir *vec.Vec3) *Ray {
 	ray := new(Ray)
 	if id == "" {
-		ray.Id = GenerateId()
+		ray.Id = GenerateId(nil)
+	} else {
+		ray.Id = id
 	}
 	ray.Type = typ
 	ray.Origin = *orig
@@ -25,10 +28,14 @@ func NewRay(id, typ string, orig, dir *vec.Vec3) *Ray {
 	return ray
 }
 
-func GenerateId() string {
+func GenerateId(parent *Ray) string {
 	// TODO: Replace with shorter string id manager
-	// Otherwise id chains will be insane
+	// Otherwise id chains will be very long
 	id := uuid.NewV4().String()
+	if parent != nil {
+		ids := []string{parent.Id, id}
+		id = strings.Join(ids, "|")
+	}
 	return id
 }
 
