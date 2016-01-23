@@ -141,26 +141,45 @@ func (t RayTree) FindRootByPixel(x, y int) (*RayTreeNode, bool) {
 	return nil, false
 }
 
-func (t *RayTree) PrintSubTree(ray *cam.Ray, verbosity uint) (string, error) {
+func (t *RayTree) GetSubTreeString(ray *cam.Ray, verbosity int) (string, error) {
 	// 0 = Lowest
 	// 3 = Highest TODO: Implement
-	verbosity = 0
 	node, found := t.FindNodeByRayId(ray.Id)
 	if !found {
 		return "", errors.New("Starting node could not be found")
 	}
 
 	accumulator := make([]string, 0)
-	TraverseNodes(node, &accumulator)
-	return strings.Join(accumulator, " "), nil
+	t.accumulateNodes(node, &accumulator, verbosity)
+	return strings.Join(accumulator, " --> "), nil
 }
 
-func TraverseNodes(node *RayTreeNode, accumulator *[]string) {
-	// TODO: Does not keep track of verbosity level
-	*accumulator = append(*accumulator, node.RayId)
+func (t *RayTree) accumulateNodes(node *RayTreeNode, accumulator *[]string, verbosity int) {
+	// TODO: An alternative approach is to collect all data and
+	// use verbosity to filter on display
+	switch verbosity {
+	case 0:
+		parts := strings.Split(node.RayId, "|")
+		for i, v := range parts {
+			parts[i] = v[:8]
+		}
+		*accumulator = append(*accumulator, strings.Join(parts, "|"))
+		break
+	case 1:
+		*accumulator = append(*accumulator, node.RayId)
+		break
+	case 2:
+		break
+	case 3:
+		*accumulator = append(*accumulator, node.String())
+		break
+	default:
+		*accumulator = append(*accumulator, node.RayId)
+	}
+
 	if len(node.Children) > 0 {
 		for _, v := range node.Children {
-			TraverseNodes(&v, accumulator)
+			t.accumulateNodes(&v, accumulator, verbosity)
 		}
 	}
 }

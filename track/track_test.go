@@ -1,7 +1,7 @@
 package track
 
 import (
-	//	"fmt"
+	"fmt"
 	"github.com/agdt3/goray/cam"
 	"github.com/agdt3/goray/obj"
 	"github.com/agdt3/goray/vec"
@@ -85,4 +85,11 @@ func TestFindNodeById(t *testing.T) {
 	if rn5.Parent.RayId != ray2.Id || len(rn5.Children) != 0 {
 		t.Error("Ray tree not set up correctly")
 	}
+
+	/*
+		st1, _ := tree.GetSubTreeString(ray1, 0)
+		st2, _ := tree.GetSubTreeString(ray2, 3)
+		fmt.Println(st1)
+		fmt.Println(st2)
+	*/
 }
