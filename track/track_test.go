@@ -1,7 +1,7 @@
 package track
 
 import (
-	"fmt"
+	//"fmt"
 	"github.com/agdt3/goray/cam"
 	"github.com/agdt3/goray/obj"
 	"github.com/agdt3/goray/vec"
@@ -63,26 +63,26 @@ func TestFindNodeById(t *testing.T) {
 		t.Error("Nodes were not added correctly")
 	}
 
-	rn1, _ := tree.FindNodeByRayId(ray1.Id)
-	rn2, _ := tree.FindNodeByRayId(ray2.Id)
+	rn1 := tree.FindNodeByRayId(ray1.Id)
+	rn2 := tree.FindNodeByRayId(ray2.Id)
 
-	if rn1.RayId != ray1.Id || rn2.RayId != ray2.Id {
+	if rn1 == nil || rn1.RayId != ray1.Id || rn2 == nil || rn2.RayId != ray2.Id {
 		t.Error("Root rays never added or found")
 	}
 
-	rn3, _ := tree.FindNodeByRayId(ray3.Id)
-	rn4, _ := tree.FindNodeByRayId(ray4.Id)
-	rn5, _ := tree.FindNodeByRayId(ray5.Id)
+	rn3 := tree.FindNodeByRayId(ray3.Id)
+	rn4 := tree.FindNodeByRayId(ray4.Id)
+	rn5 := tree.FindNodeByRayId(ray5.Id)
 
-	if rn3.Parent.RayId != ray1.Id || rn3.Children[0].RayId != ray4.Id {
+	if rn3 == nil || rn3.Parent.RayId != ray1.Id || rn3.Children[0].RayId != ray4.Id {
 		t.Error("Ray tree not set up correctly")
 	}
 
-	if rn4.Parent.RayId != ray3.Id || len(rn4.Children) != 0 {
+	if rn4 == nil || rn4.Parent.RayId != ray3.Id || len(rn4.Children) != 0 {
 		t.Error("Ray tree not set up correctly")
 	}
 
-	if rn5.Parent.RayId != ray2.Id || len(rn5.Children) != 0 {
+	if rn5 == nil || rn5.Parent.RayId != ray2.Id || len(rn5.Children) != 0 {
 		t.Error("Ray tree not set up correctly")
 	}
 
@@ -92,4 +92,23 @@ func TestFindNodeById(t *testing.T) {
 		fmt.Println(st1)
 		fmt.Println(st2)
 	*/
+}
+
+func TestFindNodeByXY(t *testing.T) {
+	t.Parallel()
+	ray1 := cam.NewRay("", "camera", vec.NewVec3(0, 0, 0), vec.NewVec3(0, 0, -1))
+	ray2 := cam.NewRay("", "camera", vec.NewVec3(0, 0, 0), vec.NewVec3(0, -1, 0))
+	tree := NewTree()
+
+	tree.AddRoot(0, 0, 0.5, 0.5, ray1)
+	tree.AddRoot(1, 1, 0.75, 0.75, ray2)
+
+	rn1 := tree.FindRootByPixel(0, 1)
+	rn2 := tree.FindRootByPixel(1, 1)
+	rn3 := tree.FindRootByPixel(0, 0)
+
+	if rn1 != nil || rn2.RayId != ray2.Id || rn3.RayId != ray1.Id {
+		t.Error("Could not correctly find rays")
+	}
+
 }

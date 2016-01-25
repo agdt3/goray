@@ -63,8 +63,8 @@ func (t *RayTree) AddRoot(x, y int, px, py float64, ray *cam.Ray) {
 }
 
 func (t *RayTree) AddNode(ray, parentray *cam.Ray, parentobj, hitobj obj.Object) {
-	parent, found := t.FindNodeByRayId(parentray.Id)
-	if !found {
+	parent := t.FindNodeByRayId(parentray.Id)
+	if parent == nil {
 		// TODO: Turn this into an error? or use nil on parent pointer
 		fmt.Println("Could not find parent node. Cannot add current node")
 		return
@@ -97,7 +97,7 @@ func (t *RayTree) AddNode(ray, parentray *cam.Ray, parentobj, hitobj obj.Object)
 	t.NodeCount += 1
 }
 
-func (t *RayTree) FindNodeByRayId(id string) (*RayTreeNode, bool) {
+func (t *RayTree) FindNodeByRayId(id string) *RayTreeNode {
 	/*
 		if ChildNodeId: AAA|BBB|NNN
 		then ParentNodeId: AAA|BBB
@@ -105,7 +105,7 @@ func (t *RayTree) FindNodeByRayId(id string) (*RayTreeNode, bool) {
 	return t.Find(t.Children, id)
 }
 
-func (t *RayTree) Find(children []RayTreeNode, id string) (*RayTreeNode, bool) {
+func (t *RayTree) Find(children []RayTreeNode, id string) *RayTreeNode {
 	// TODO: Replace with search term and comparator function, maybe
 	if len(children) > 0 {
 		for i, v := range children {
@@ -119,33 +119,34 @@ func (t *RayTree) Find(children []RayTreeNode, id string) (*RayTreeNode, bool) {
 					return t.Find(children[i].Children, id)
 				} else {
 					// id lengths match, this is the correct ray node
-					return &children[i], true
+					return &children[i]
 				}
-				return &children[i], true
+				return &children[i]
 			}
 		}
 	}
 
-	return nil, false
+	return nil
 }
 
-func (t RayTree) FindRootByPixel(x, y int) (*RayTreeNode, bool) {
+func (t *RayTree) FindRootByPixel(x, y int) *RayTreeNode {
 	// TODO: Optimize this by structuring Children in a way that doesn't
 	// force a linear O(theta) = n search
-	for _, v := range t.Children {
-		if v.X == x && v.Y == y {
-			return &v, true
+
+	for i, _ := range t.Children {
+		if t.Children[i].X == x && t.Children[i].Y == y {
+			return &t.Children[i]
 		}
 	}
 
-	return nil, false
+	return nil
 }
 
 func (t *RayTree) GetSubTreeString(ray *cam.Ray, verbosity int) (string, error) {
 	// 0 = Lowest
 	// 3 = Highest TODO: Implement
-	node, found := t.FindNodeByRayId(ray.Id)
-	if !found {
+	node := t.FindNodeByRayId(ray.Id)
+	if node == nil {
 		return "", errors.New("Starting node could not be found")
 	}
 
@@ -159,11 +160,8 @@ func (t *RayTree) accumulateNodes(node *RayTreeNode, accumulator *[]string, verb
 	// use verbosity to filter on display
 	switch verbosity {
 	case 0:
-		parts := strings.Split(node.RayId, "|")
-		for i, v := range parts {
-			parts[i] = v[:8]
-		}
-		*accumulator = append(*accumulator, strings.Join(parts, "|"))
+		shortId := t.shortenId(node)
+		*accumulator = append(*accumulator, shortId)
 		break
 	case 1:
 		*accumulator = append(*accumulator, node.RayId)
@@ -182,6 +180,14 @@ func (t *RayTree) accumulateNodes(node *RayTreeNode, accumulator *[]string, verb
 			t.accumulateNodes(&v, accumulator, verbosity)
 		}
 	}
+}
+
+func (t *RayTree) shortenId(node *RayTreeNode) string {
+	parts := strings.Split(node.RayId, "|")
+	for i, v := range parts {
+		parts[i] = v[:8]
+	}
+	return strings.Join(parts, "|")
 }
 
 func (rtn *RayTreeNode) String() string {
