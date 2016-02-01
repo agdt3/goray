@@ -65,3 +65,14 @@ func TestCross(t *testing.T) {
 	}
 
 }
+
+func TestReflect(t *testing.T) {
+	t.Parallel()
+	i := NewVec3(0, 1, -1)
+	n := NewVec3(0, 0, 1)
+	r := Reflect(*i, *n)
+
+	if r.X != 0 || r.Y != 1 || r.Z != 1 {
+		t.Error("Vector not reflected correctly")
+	}
+}

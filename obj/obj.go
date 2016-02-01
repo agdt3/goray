@@ -106,3 +106,62 @@ func (s Sphere) GetRefractiveIndex() float64 {
 func (s Sphere) GetId() string {
 	return s.Id
 }
+
+// TODO: Ironically, Light does not fit the Object interface
+type Light struct {
+	Type         string //point, directional, etc
+	Center       vec.Vec3
+	Radius       float64
+	RadiusSquare float64
+	Col          color.RGBA
+}
+
+func (l *Light) Intersects(ray *cam.Ray) (bool, float64) {
+	rd := ray.Direction
+	rd.Normalize()
+
+	oc := vec.Subtract(l.Center, ray.Origin)
+	l2oc := vec.Dot(oc, oc)
+	t_ca := vec.Dot(oc, rd)
+
+	//sphere located behind ray origin
+	if t_ca < 0 {
+		return false, 0
+	}
+
+	d2 := l2oc - (t_ca * t_ca)
+
+	// if the distance between the closest point to the sphere center on
+	// the projected ray is greater than the radius, then the projected
+	// ray is definitely outside the bounds of the sphere
+	if d2 > l.RadiusSquare {
+		return false, 0
+	}
+
+	t2hc := l.RadiusSquare - d2
+
+	if t2hc < 0 {
+		return false, 0
+	}
+
+	thc := math.Sqrt(t2hc)
+	t0 := t_ca - thc
+	t1 := t_ca + thc
+
+	// Sphere is behind the point of origin
+	if t0 < 0 && t1 < 0 {
+		return false, 0
+	} else if t0 <= 0 && t1 > 0 {
+		// Point of origin is inside the sphere or on/inside the surface
+		t0 = t1
+	}
+
+	// Swap if reversed
+	if t0 > t1 {
+		tmp := t0
+		t0 = t1
+		t1 = tmp
+	}
+
+	return true, t0
+}

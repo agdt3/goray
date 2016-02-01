@@ -130,3 +130,8 @@ func IsEqual(v1, v2 Vec3) bool {
 
 	return true
 }
+
+func Reflect(i, n Vec3) Vec3 {
+	// i - 2 * dot(n, i) * n
+	return Subtract(i, Multiply(n, (Dot(n, i)*2.0)))
+}

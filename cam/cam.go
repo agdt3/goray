@@ -74,7 +74,7 @@ type Camera struct {
 	Angle       float64
 }
 
-func MakePerspectiveCamera(org, dir vec.Vec3, w, h int, fovx, fovy float64) *Camera {
+func NewPerspectiveCamera(org, dir vec.Vec3, w, h int, fovx, fovy float64) *Camera {
 	cam := new(Camera)
 	cam.Origin = org
 	cam.Dir = dir

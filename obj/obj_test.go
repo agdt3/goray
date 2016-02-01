@@ -1,30 +1,29 @@
-package main
+package obj
 
 import (
-	"fmt"
+	//"fmt"
 	"github.com/agdt3/goray/cam"
-	"github.com/agdt3/goray/obj"
 	"github.com/agdt3/goray/vec"
 	"image/color"
+	"math"
 	"testing"
 )
 
-func TestBlendColors(t *testing.T) {
-	t.Parallel()
-
-	c1 := color.RGBA{255, 255, 0, 1}
-	c2 := color.RGBA{255, 0, 0, 1}
-	c3 := BlendColors(c1, c2, 0.5)
-	if c3.R != 255 || c3.G != 180 || c3.B != 0 || c3.A != 1 {
-		t.Error("Color blending did not work correctly")
+// TODO: There is a better method than epsilon testing
+func AlmostEqual(v1, v2, tolerance float64) bool {
+	if math.Abs(v1)-math.Abs(v2) < tolerance {
+		return true
 	}
+	return false
 }
 
+/*
 func TestCameraRayIntersection1D(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 
 	center := vec.NewVec3(0, 0, -3)
-	sphere := obj.Sphere{"sphere1", *center, 1, color.RGBA{0, 0, 255, 1}, 1, 1.0}
+	sphere := Sphere{"sphere1", *center, 1, color.RGBA{0, 0, 255, 1}, 1, 1.0}
 	ray := cam.NewRay("A", "camera", vec.NewVec3(0, 0, 0), vec.NewVec3(0, 0, -1))
 	isHit, hit, n, t0, t1 := sphere.Intersects(ray)
 
@@ -46,11 +45,11 @@ func TestCameraRayIntersection1D(t *testing.T) {
 }
 
 func TestTransmissionRayIntersection1DHeadOn(t *testing.T) {
+	t.Skip()
 	t.Parallel()
 
-	world := NewWorld()
 	center := vec.NewVec3(0, 0, -3)
-	sphere := obj.Sphere{"sphere1", *center, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
+	sphere := Sphere{"sphere1", *center, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
 	ray := cam.NewRay("A", "camera", vec.NewVec3(0, 0, 0), vec.NewVec3(0, 0, -1))
 	_, hit, n, _, _ := sphere.Intersects(ray)
 
@@ -141,12 +140,68 @@ func TestTransmissionRayIntersection1DAtAngle(t *testing.T) {
 	fmt.Println(trans_ray)
 	fmt.Println(world_trans_ray)
 
-	/*
-		fmt.Println(isHit2)
-		fmt.Printf("hit %v\n", hit2)
-		fmt.Printf("n %v\n", n2)
-		fmt.Printf("t0 %v\n", t02)
-		fmt.Printf("t1 %v\n", t12)
-	*/
 	//no-op
+}
+*/
+
+func TestLightIntersection1D(t *testing.T) {
+	t.Parallel()
+
+	ray := cam.NewRay("noid", "shadow", vec.NewVec3(0, 0, 0), vec.NewVec3(0, 0, -1))
+	center := vec.NewVec3(0, 0, -3)
+	light := Light{"light1", *center, 1, 1, color.RGBA{255, 255, 255, 1}}
+
+	hit, dist := light.Intersects(ray)
+	if !hit || dist != 2.0 {
+		t.Error("Shadow ray did not intersect with light")
+	}
+}
+
+func TestLightIntersection2D(t *testing.T) {
+	t.Parallel()
+
+	dir := vec.NewVec3(0, 1, -1)
+	dir.Normalize()
+	ray := cam.NewRay("noid", "shadow", vec.NewVec3(0, 0, 0), dir)
+	center := vec.NewVec3(0, 2, -3)
+	light := Light{"light1", *center, 1, 1, color.RGBA{255, 255, 255, 1}}
+
+	hit, dist := light.Intersects(ray)
+	if !hit {
+		t.Error("Shadow ray did not intersect with light")
+	}
+
+	if !AlmostEqual(dist, 2.828, 0.001) {
+		t.Error("Shadow ray did not hit in the correct location")
+	}
+	/*
+		if !hit || dist != 2.828427124746191 {
+			t.Error("Shadow ray did not intersect with light")
+		}
+	*/
+}
+
+func TestLightIntersectionByReflectedRay(t *testing.T) {
+	t.Parallel()
+
+	dir := vec.NewVec3(0, 1, -1)
+	dir.Normalize()
+	ray := cam.NewRay("noid", "camera", vec.NewVec3(0, 0, 0), dir)
+	center1 := vec.NewVec3(0, 5, 0)
+	center2 := vec.NewVec3(0, 2, -3)
+	light := Light{"light1", *center1, 1, 1, color.RGBA{255, 255, 255, 1}}
+	sphere := Sphere{"sphere1", *center2, 1, color.RGBA{255, 255, 255, 1}, 1, 1}
+
+	is_hit, hit, n, t0, _ := sphere.Intersects(ray)
+	if !is_hit || !AlmostEqual(t0, 2.828, 0.001) {
+		t.Error("Shadow ray did not intersect with light")
+	}
+
+	reflected_dir := vec.Reflect(hit, n)
+	shadow_ray := cam.NewRay("noid", "shadow", &hit, &reflected_dir)
+	is_hit2, dist := light.Intersects(shadow_ray)
+
+	if !is_hit2 || !AlmostEqual(dist, 2.828, 0.001) {
+		t.Error("Shadow ray did not intersect with light")
+	}
 }
