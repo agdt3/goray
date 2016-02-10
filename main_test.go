@@ -54,7 +54,7 @@ func TestTransmissionRayIntersection1DHeadOn(t *testing.T) {
 	ray := cam.NewRay("A", "camera", vec.NewVec3(0, 0, 0), vec.NewVec3(0, 0, -1))
 	_, hit, n, _, _ := sphere.Intersects(ray)
 
-	internal_dir := RefractionVector(
+	internal_dir := NewRefractionVector(
 		ray.Direction,
 		n,
 		world.RefractiveIndex,
@@ -75,7 +75,7 @@ func TestTransmissionRayIntersection1DHeadOn(t *testing.T) {
 		t.Error("Internal ray did not intersect at the right location")
 	}
 
-	external_dir := RefractionVector(
+	external_dir := NewRefractionVector(
 		ref_ray.Direction,
 		vec.Invert(n2),
 		sphere.GetRefractiveIndex(),
@@ -86,7 +86,7 @@ func TestTransmissionRayIntersection1DHeadOn(t *testing.T) {
 	}
 
 	trans_ray := cam.NewRay("C", "transmission", &hit2, &external_dir)
-	world_trans_ray, _ := world.MakeTransmittedRay(ray, hit, n, sphere)
+	world_trans_ray, _ := world.NewTransmittedRay(ray, hit, n, sphere)
 
 	if !cam.IsEqual(trans_ray, world_trans_ray) {
 		t.Error("World function incorrectly constructed transmission ray")
@@ -103,7 +103,7 @@ func TestTransmissionRayIntersection1DAtAngle(t *testing.T) {
 	ray := cam.NewRay("A", "camera", vec.NewVec3(0, 0, 0), vec.NewVec3(0, 0, -1))
 	_, hit, n, _, _ := sphere.Intersects(ray)
 
-	internal_dir := RefractionVector(
+	internal_dir := NewRefractionVector(
 		ray.Direction,
 		n,
 		world.RefractiveIndex,
@@ -124,7 +124,7 @@ func TestTransmissionRayIntersection1DAtAngle(t *testing.T) {
 		t.Error("Internal ray did not intersect at the right location")
 	}
 
-	external_dir := RefractionVector(
+	external_dir := NewRefractionVector(
 		ref_ray.Direction,
 		vec.Invert(n2),
 		sphere.GetRefractiveIndex(),
@@ -135,7 +135,7 @@ func TestTransmissionRayIntersection1DAtAngle(t *testing.T) {
 	}
 
 	trans_ray := cam.Ray{"C", "transmitted", hit2, external_dir}
-	world_trans_ray, _ := world.MakeTransmittedRay(ray, hit, n, sphere)
+	world_trans_ray, _ := world.NewTransmittedRay(ray, hit, n, sphere)
 	fmt.Println(ray)
 	fmt.Println(ref_ray)
 	fmt.Println(trans_ray)

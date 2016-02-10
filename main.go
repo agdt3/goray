@@ -72,7 +72,7 @@ func (w *World) MakeLights() {
 	w.Lights = append(w.Lights, light)
 }
 
-func (w World) makeCameraRay(x, y int) *cam.Ray {
+func (w World) NewCameraRay(x, y int) *cam.Ray {
 	px, py := w.Cam.ConvertPosToPixel(x, y)
 	origin := vec.NewVec3(0, 0, 0)
 	dir := vec.NewVec3(px, py, -1)
@@ -81,7 +81,7 @@ func (w World) makeCameraRay(x, y int) *cam.Ray {
 	return ray
 }
 
-func RefractionVector(l, n vec.Vec3, ref_index1, ref_index2 float64) vec.Vec3 {
+func NewRefractionVector(l, n vec.Vec3, ref_index1, ref_index2 float64) vec.Vec3 {
 	// l - Initial hit / light vector
 	// n - n vector for surface
 	// refIndex1 - refraction index of material of incoming ray
@@ -101,20 +101,20 @@ func RefractionVector(l, n vec.Vec3, ref_index1, ref_index2 float64) vec.Vec3 {
 	return vr
 }
 
-func (w World) MakeTransmittedRay(ray *cam.Ray, hit, n vec.Vec3, object obj.Object) (*cam.Ray, bool) {
+func (w World) NewTransmittedRay(ray *cam.Ray, hit, n vec.Vec3, object obj.Object) (*cam.Ray, bool) {
 	// TODO:
 	// Deal with total internal refraction. Total internal reflection occurs
 	// when n2 < n1, so we can ignore this for now
 	external_ref_index := w.RefractiveIndex
 	internal_ref_index := object.GetRefractiveIndex()
 
-	irv := RefractionVector(ray.Direction, n, external_ref_index, internal_ref_index)
+	irv := NewRefractionVector(ray.Direction, n, external_ref_index, internal_ref_index)
 	irv.Normalize()
 	internal_ray := cam.NewRay("", "refraction", &hit, &irv)
 	is_hit2, hit2, n2, _, _ := object.Intersects(internal_ray)
 	invn2 := vec.Invert(n2)
 	if is_hit2 {
-		erv := RefractionVector(irv, invn2, internal_ref_index, external_ref_index)
+		erv := NewRefractionVector(irv, invn2, internal_ref_index, external_ref_index)
 		erv.Normalize()
 		return cam.NewRay("", "transmission", &hit2, &erv), true
 	} else {
@@ -129,15 +129,12 @@ func (w *World) NewShadowRay(incident *cam.Ray, n, hit vec.Vec3) *cam.Ray {
 	return cam.NewRay("", "shadow", &hit, &reflected_dir)
 }
 
-func (w *World) lightIntersections(ray *cam.Ray) (color.RGBA, bool) {
+func (w *World) intersectLightsOld(ray *cam.Ray) (color.RGBA, bool) {
 	hit_light := false
 	hit_dist := INF_DIST
 	hit_color := color.RGBA{0, 0, 0, 0}
 	for _, v := range w.Lights {
 		if hit, dist := v.Intersects(ray); hit && dist < hit_dist {
-			//hit, dist := v.Intersects(ray)
-			//if hit && (dist < hit_dist) {
-			fmt.Println("actually hit a thing")
 			hit_light = true
 			hit_dist = dist
 			hit_color = v.Col
@@ -153,6 +150,97 @@ func (w *World) lightIntersections(ray *cam.Ray) (color.RGBA, bool) {
 		}
 	}
 	return hit_color, hit_light
+}
+
+func (w *World) intersectLights(ray *cam.Ray, dist float64) (*obj.Light, float64) {
+	closest_dist := dist
+	var closest_light *obj.Light
+	closest_light = nil
+	for i, v := range w.Lights {
+		is_hit, new_dist := v.Intersects(ray)
+		if is_hit && (new_dist < closest_dist) {
+			closest_dist = new_dist
+			closest_light = &w.Lights[i]
+		}
+	}
+	return closest_light, closest_dist
+}
+
+func (w *World) intersectObjects(ray *cam.Ray, dist float64) (*obj.Object, vec.Vec3, vec.Vec3, float64) {
+	closest_dist := dist
+	closest_hit_location := *vec.NewVec3(0, 0, 0)
+	closest_n_vector := *vec.NewVec3(0, 0, 0)
+	var closest_obj *obj.Object
+	closest_obj = nil
+	for i, obj := range w.Objects {
+		is_hit, hit, n, t0, _ := obj.Intersects(ray)
+		if new_dist := math.Abs(t0); is_hit && (new_dist < closest_dist) {
+			closest_dist = new_dist
+			closest_obj = &w.Objects[i]
+			closest_hit_location = hit
+			closest_n_vector = n
+		}
+	}
+	return closest_obj, closest_hit_location, closest_n_vector, closest_dist
+}
+
+// TODO: Figure out whether this should return obj pointer or color val
+func (w *World) TraceRay(ray *cam.Ray, reflection uint) (color.RGBA, bool) {
+	current_color := color.RGBA{0, 0, 0, 0}
+	if reflection > w.Config.MaxReflections {
+		return current_color, false
+	} else {
+		reflection += 1
+	}
+
+	closest_dist := INF_DIST
+
+	hit_obj, hit, n, dist := w.intersectObjects(ray, closest_dist)
+	if hit_obj != nil {
+		closest_dist = dist
+	}
+
+	// Smack into some lights
+	var light *obj.Light
+	if w.Config.UseLight {
+		light, _ = w.intersectLights(ray, closest_dist)
+	}
+
+	// If light is the closest thing we hit, return light
+	// Lights terminate all rays
+	var trans_color color.RGBA
+	var reflected_color color.RGBA
+	if light != nil && ray.Type != "camera" {
+		return light.Col, true
+	} else if hit_obj != nil {
+		current_color = (*hit_obj).GetColor()
+
+		// transmitted ray
+		trans_hit := false
+		if w.Config.UseRefraction {
+			trans_ray, _ := w.NewTransmittedRay(ray, hit, n, *hit_obj)
+			trans_color, trans_hit = w.TraceRay(trans_ray, reflection)
+		}
+
+		// shadow ray
+		reflect_hit := false
+		if w.Config.UseShadows {
+			reflected_ray := w.NewShadowRay(ray, n, hit)
+			reflected_color, reflect_hit = w.TraceRay(reflected_ray, reflection)
+		}
+
+		if trans_hit {
+			current_color = BlendColors(current_color, trans_color, 0.5)
+		}
+
+		if reflect_hit {
+			current_color = BlendColors(current_color, reflected_color, 0.5)
+		}
+
+		return current_color, true
+	}
+
+	return current_color, false
 }
 
 func (w *World) traceRay(ray *cam.Ray, reflection uint) (color.RGBA, bool) {
@@ -179,7 +267,7 @@ func (w *World) traceRay(ray *cam.Ray, reflection uint) (color.RGBA, bool) {
 					// Gather up direct lights
 					// Create shadow ray
 					shadow_ray := w.NewShadowRay(ray, n, hit)
-					light_color, did_hit_light := w.lightIntersections(shadow_ray)
+					light_color, did_hit_light := w.intersectLightsOld(shadow_ray)
 
 					if did_hit_light {
 						pixel_color = BlendColors(pixel_color, light_color, 0.5)
@@ -188,7 +276,7 @@ func (w *World) traceRay(ray *cam.Ray, reflection uint) (color.RGBA, bool) {
 				}
 
 				if w.Config.UseRefraction {
-					trans_ray, success := w.MakeTransmittedRay(ray, hit, n, obj)
+					trans_ray, success := w.NewTransmittedRay(ray, hit, n, obj)
 					if success {
 						ref_color, hit := w.traceRay(trans_ray, reflection)
 						if hit {
@@ -212,8 +300,8 @@ func (w *World) Trace() {
 	b := w.Img.Bounds()
 	for y := b.Min.Y; y < b.Max.Y; y++ {
 		for x := b.Min.X; x < b.Max.X; x++ {
-			ray := w.makeCameraRay(x, y)
-			pixel_color, _ := w.traceRay(ray, 0)
+			ray := w.NewCameraRay(x, y)
+			pixel_color, _ := w.TraceRay(ray, 0)
 			w.Img.Set(x, y, pixel_color)
 		}
 	}
@@ -266,5 +354,5 @@ func main() {
 	world.MakeObjects()
 	world.MakeLights()
 	world.Trace()
-	world.ShowStats()
+	//world.ShowStats()
 }

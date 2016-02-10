@@ -85,7 +85,7 @@ func TestTransmissionRayIntersection1DHeadOn(t *testing.T) {
 	}
 
 	trans_ray := cam.NewRay("C", "transmission", &hit2, &external_dir)
-	world_trans_ray, _ := world.MakeTransmittedRay(ray, hit, n, sphere)
+	world_trans_ray, _ := world.NewTransmittedRay(ray, hit, n, sphere)
 
 	if !cam.IsEqual(trans_ray, world_trans_ray) {
 		t.Error("World function incorrectly constructed transmission ray")
@@ -134,7 +134,7 @@ func TestTransmissionRayIntersection1DAtAngle(t *testing.T) {
 	}
 
 	trans_ray := cam.Ray{"C", "transmitted", hit2, external_dir}
-	world_trans_ray, _ := world.MakeTransmittedRay(ray, hit, n, sphere)
+	world_trans_ray, _ := world.NewTransmittedRay(ray, hit, n, sphere)
 	fmt.Println(ray)
 	fmt.Println(ref_ray)
 	fmt.Println(trans_ray)
