@@ -14,13 +14,13 @@ type Vec3 struct {
 }
 
 func NewVec3(x, y, z float64) *Vec3 {
-	vec3 := new(Vec3)
-	vec3.X = x
-	vec3.Y = y
-	vec3.Z = z
-	vec3.Magnitude, vec3.magnitudeInverse = vec3.CalculateMagnitude()
+	v := new(Vec3)
+	v.X = x
+	v.Y = y
+	v.Z = z
+	v.Magnitude, v.magnitudeInverse = v.CalculateMagnitude()
 
-	return vec3
+	return v
 }
 
 func (v *Vec3) Add(v2 Vec3) {

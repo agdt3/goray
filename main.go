@@ -53,15 +53,23 @@ func NewWorld() *World {
 }
 
 func (w *World) MakeObjects() {
+	// spheres
 	center1 := vec.NewVec3(0, 0.5, -4)
 	center2 := vec.NewVec3(3, 0, -7)
 	sphere1 := obj.Sphere{"Sphere1", *center1, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
 	sphere2 := obj.Sphere{"Sphere2", *center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
 
-	// Slice of objects, 0 values, 2 capacity
-	w.Objects = make([]obj.Object, 0, 2)
+	// triangles
+	v0 := vec.NewVec3(0, 0, -3)
+	v1 := vec.NewVec3(2, 2, -3)
+	v2 := vec.NewVec3(-2, 2, -3)
+	triangle1 := obj.NewTriangle("Tri1", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1)
+
+	// Slice of objects, 0 values, 3 capacity
+	w.Objects = make([]obj.Object, 0, 3)
 	w.Objects = append(w.Objects, obj.Object(sphere1))
 	w.Objects = append(w.Objects, obj.Object(sphere2))
+	w.Objects = append(w.Objects, obj.Object(triangle1))
 }
 
 func (w *World) MakeLights() {

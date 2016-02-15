@@ -205,3 +205,66 @@ func TestLightIntersectionByReflectedRay(t *testing.T) {
 		t.Error("Shadow ray did not intersect with light")
 	}
 }
+
+func TestTriangleInit(t *testing.T) {
+	// Points v1 and v2 are created CCW relative to v0
+	// (in a left-handed system where camera points at -z)
+	// In such a case, the N vector points towards the viewer
+	v0 := vec.NewVec3(0, 0, -1)
+	v1 := vec.NewVec3(1, 1, -1)
+	v2 := vec.NewVec3(-1, 1, -1)
+	tri := NewTriangle("tri1", *v0, *v1, *v2, color.RGBA{0, 0, 0, 1}, 1, 1)
+
+	e0 := vec.Subtract(*v1, *v0)
+	e1 := vec.Subtract(*v2, *v1)
+	e2 := vec.Subtract(*v0, *v2)
+
+	n := vec.NewVec3(0, 0, 1)
+
+	if tri.E0 != e0 {
+		t.Error("Edges not properly calculated")
+	}
+
+	if tri.E1 != e1 {
+		t.Error("Edges not properly calculated")
+	}
+
+	if tri.E2 != e2 {
+		t.Error("Edges not properly calculated")
+	}
+
+	if tri.N != *n {
+		t.Error("N vector not properly calculated")
+	}
+}
+
+func TestTriangleIntersects(t *testing.T) {
+	v0 := vec.NewVec3(0, -1, -1)
+	v1 := vec.NewVec3(1, 1, -1)
+	v2 := vec.NewVec3(-1, 1, -1)
+	tri := NewTriangle("tri1", *v0, *v1, *v2, color.RGBA{0, 0, 0, 1}, 1, 1)
+
+	ray := cam.Ray{"", "camera", *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, -1)}
+
+	is_hit, p, n, t0, _ := tri.Intersects(&ray)
+
+	i_p := *vec.NewVec3(0, 0, -1)
+	i_n := *vec.NewVec3(0, 0, 1)
+	i_t0 := 1.0
+
+	if is_hit != true {
+		t.Error("Triangle was not hit")
+	}
+
+	if !vec.IsEqual(p, i_p) {
+		t.Error("Hit location was not correct")
+	}
+
+	if !vec.IsEqual(n, i_n) {
+		t.Error("N vector not correct")
+	}
+
+	if t0 != i_t0 {
+		t.Error("Distance incorrect")
+	}
+}
