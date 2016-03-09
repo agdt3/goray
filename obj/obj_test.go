@@ -1,12 +1,12 @@
 package obj
 
 import (
-	//"fmt"
-	"github.com/agdt3/goray/cam"
-	"github.com/agdt3/goray/vec"
 	"image/color"
 	"math"
 	"testing"
+
+	"github.com/agdt3/goray/cam"
+	"github.com/agdt3/goray/vec"
 )
 
 // TODO: There is a better method than epsilon testing
@@ -213,7 +213,7 @@ func TestTriangleInit(t *testing.T) {
 	v0 := vec.NewVec3(0, 0, -1)
 	v1 := vec.NewVec3(1, 1, -1)
 	v2 := vec.NewVec3(-1, 1, -1)
-	tri := NewTriangle("tri1", *v0, *v1, *v2, color.RGBA{0, 0, 0, 1}, 1, 1)
+	tri := NewTriangle("tri1", *v0, *v1, *v2, color.RGBA{0, 0, 0, 1}, 1, 1, false)
 
 	e0 := vec.Subtract(*v1, *v0)
 	e1 := vec.Subtract(*v2, *v1)
@@ -242,7 +242,7 @@ func TestTriangleIntersects(t *testing.T) {
 	v0 := vec.NewVec3(0, -1, -1)
 	v1 := vec.NewVec3(1, 1, -1)
 	v2 := vec.NewVec3(-1, 1, -1)
-	tri := NewTriangle("tri1", *v0, *v1, *v2, color.RGBA{0, 0, 0, 1}, 1, 1)
+	tri := NewTriangle("tri1", *v0, *v1, *v2, color.RGBA{0, 0, 0, 1}, 1, 1, false)
 
 	ray := cam.Ray{"", "camera", *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, -1)}
 

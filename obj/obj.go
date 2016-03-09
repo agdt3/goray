@@ -1,11 +1,11 @@
 package obj
 
 import (
-	//"fmt"
-	"github.com/agdt3/goray/cam"
-	"github.com/agdt3/goray/vec"
 	"image/color"
 	"math"
+
+	"github.com/agdt3/goray/cam"
+	"github.com/agdt3/goray/vec"
 )
 
 type Object interface {
@@ -13,6 +13,10 @@ type Object interface {
 	GetColor() color.RGBA
 	GetRefractiveIndex() float64
 	Intersects(*cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
+}
+
+func FalseObject() (bool, vec.Vec3, vec.Vec3, float64, float64) {
+	return false, *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, 0), 0, 0
 }
 
 type Sphere struct {
@@ -175,19 +179,23 @@ type Triangle struct {
 	E0              vec.Vec3
 	E1              vec.Vec3
 	E2              vec.Vec3
+	v0v1            vec.Vec3
+	v0v2            vec.Vec3
 	N               vec.Vec3
 	Col             color.RGBA
 	EasingDistance  float64
 	RefractiveIndex float64
+	Culling         bool
 }
 
-func NewTriangle(id string, v0, v1, v2 vec.Vec3, col color.RGBA, easing, refractive float64) *Triangle {
+func NewTriangle(id string, v0, v1, v2 vec.Vec3, col color.RGBA, easing, refractive float64, culling bool) *Triangle {
 	t := new(Triangle)
 
 	t.Id = id
 	t.Col = col
 	t.EasingDistance = easing
 	t.RefractiveIndex = refractive
+	t.Culling = culling
 
 	// Verticies
 	t.V0 = v0
@@ -200,9 +208,11 @@ func NewTriangle(id string, v0, v1, v2 vec.Vec3, col color.RGBA, easing, refract
 	t.E2 = vec.Subtract(v0, v2)
 
 	// Cross product vectors
-	v1v0 := vec.Subtract(v1, v0)
-	v2v0 := vec.Subtract(v2, v0)
-	t.N = vec.Cross(v1v0, v2v0)
+	t.v0v1 = vec.Subtract(v1, v0)
+	t.v0v2 = vec.Subtract(v2, v0)
+	t.N = vec.Cross(t.v0v1, t.v0v2)
+
+	// May not need to normalize this
 	t.N.Normalize()
 	return t
 }
@@ -219,8 +229,9 @@ func (t *Triangle) GetRefractiveIndex() float64 {
 	return t.RefractiveIndex
 }
 
-func (t *Triangle) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
+func (t *Triangle) IntersectsImplicit(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	// This is the geometric solution
+	// Plane intersection first
 	TOLERANCE := 0.001
 	dir := ray.Direction
 	dir.Normalize()
@@ -262,5 +273,102 @@ func (t *Triangle) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, 
 		return false, *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, 0), 0, 0
 	}
 
+	return true, P, t.N, t0, t0
+}
+
+func (t *Triangle) IntersectsBarycentric(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
+	TOLERANCE := 0.001
+	dir := ray.Direction
+	dir.Normalize()
+
+	if math.Abs((vec.Dot(t.N, dir))) < TOLERANCE {
+		// Ray direction and N are perpendicular
+		// Ray is parallel to plane and will not intersect
+		return FalseObject()
+	}
+
+	D := vec.Dot(t.N, t.V0)
+	t0 := (vec.Dot(t.N, ray.Origin) + D) / (vec.Dot(t.N, dir))
+
+	if t0 < 0 {
+		// Plane is behind ray
+		return FalseObject()
+	}
+
+	dist := t.EasingDistance * t0
+	dir.Multiply(dist)
+	P := vec.Add(ray.Origin, dir)
+
+	/* Barycentric */
+	v0p := vec.Subtract(P, t.V0) // v0 to P
+	v1p := vec.Subtract(P, t.V1) // v1 to P
+	v2p := vec.Subtract(P, t.V2) // v2 to P
+
+	denominator := vec.Dot(t.N, t.N)
+	// Can compare parallelogram areas instead of triangle areas
+
+	// Edge 0
+	c := vec.Cross(t.E0, v0p)
+	if vec.Dot(c, t.N) < 0 {
+		return FalseObject()
+	}
+
+	// Edge 1
+	c = vec.Cross(t.E1, v1p)
+	u := vec.Dot(c, t.N)
+	if u < 0 {
+		return FalseObject()
+	}
+
+	// Edge 2
+	c = vec.Cross(t.E2, v2p)
+	v := vec.Dot(c, t.N)
+	if v < 0 {
+		return FalseObject()
+	}
+
+	u /= denominator
+	v /= denominator
+
+	return true, P, t.N, t0, t0
+}
+
+func (t *Triangle) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
+	TOLERANCE := 0.001
+	dir := ray.Direction
+	dir.Normalize()
+
+	/* Trombole-Muller */
+	pvec := vec.Cross(dir, t.v0v2)
+	denominator := vec.Dot(pvec, t.v0v1)
+	inv_denominator := 1 / denominator
+
+	if t.Culling && (denominator < TOLERANCE) {
+		return FalseObject()
+	} else if math.Abs(denominator) < TOLERANCE {
+		return FalseObject()
+	}
+
+	tvec := vec.Subtract(ray.Origin, t.V0)
+	qvec := vec.Cross(tvec, t.v0v1)
+
+	u := vec.Dot(pvec, tvec) * inv_denominator
+	if u < 0 || u > 1 {
+		return FalseObject()
+	}
+
+	v := vec.Dot(qvec, dir) * inv_denominator
+	if v < 0 || u+v > 1 {
+		return FalseObject()
+	}
+
+	// (t0, u, v) as opposed to (t, u, v)
+	t0 := vec.Dot(qvec, t.v0v2) * inv_denominator
+
+	dist := t.EasingDistance * t0
+	dir.Multiply(dist)
+	P := vec.Add(ray.Origin, dir)
+
+	// Note that may have dist < t0
 	return true, P, t.N, t0, t0
 }

@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/agdt3/goray/cam"
 	"github.com/agdt3/goray/obj"
-	//"github.com/agdt3/goray/track"
 	"github.com/agdt3/goray/vec"
+	//"github.com/agdt3/goray/track"
 	"image"
 	"image/color"
 	"image/draw"
@@ -60,10 +61,10 @@ func (w *World) MakeObjects() {
 	sphere2 := obj.Sphere{"Sphere2", *center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
 
 	// triangles
-	v0 := vec.NewVec3(0, 0, -3)
-	v1 := vec.NewVec3(2, 2, -3)
-	v2 := vec.NewVec3(-2, 2, -3)
-	triangle1 := obj.NewTriangle("Tri1", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1)
+	v0 := vec.NewVec3(0, -1, -3)
+	v1 := vec.NewVec3(1, 1, -3)
+	v2 := vec.NewVec3(-1, 1, -3)
+	triangle1 := obj.NewTriangle("Tri1", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1, false)
 
 	// Slice of objects, 0 values, 3 capacity
 	w.Objects = make([]obj.Object, 0, 3)
