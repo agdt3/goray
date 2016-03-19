@@ -229,6 +229,7 @@ func (t *Triangle) GetRefractiveIndex() float64 {
 	return t.RefractiveIndex
 }
 
+// TODO: Dead code
 func (t *Triangle) IntersectsImplicit(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	// This is the geometric solution
 	// Plane intersection first
@@ -276,6 +277,7 @@ func (t *Triangle) IntersectsImplicit(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, f
 	return true, P, t.N, t0, t0
 }
 
+// TODO: Dead code
 func (t *Triangle) IntersectsBarycentric(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	TOLERANCE := 0.001
 	dir := ray.Direction

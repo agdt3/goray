@@ -207,6 +207,8 @@ func TestLightIntersectionByReflectedRay(t *testing.T) {
 }
 
 func TestTriangleInit(t *testing.T) {
+	t.Parallel()
+
 	// Points v1 and v2 are created CCW relative to v0
 	// (in a left-handed system where camera points at -z)
 	// In such a case, the N vector points towards the viewer
@@ -239,6 +241,8 @@ func TestTriangleInit(t *testing.T) {
 }
 
 func TestTriangleIntersects(t *testing.T) {
+	t.Parallel()
+
 	v0 := vec.NewVec3(0, -1, -1)
 	v1 := vec.NewVec3(1, 1, -1)
 	v2 := vec.NewVec3(-1, 1, -1)
@@ -266,5 +270,22 @@ func TestTriangleIntersects(t *testing.T) {
 
 	if t0 != i_t0 {
 		t.Error("Distance incorrect")
+	}
+}
+
+func TestTriangleCullBackface(t *testing.T) {
+	t.Parallel()
+
+	v0 := vec.NewVec3(0, -1, -1)
+	v1 := vec.NewVec3(-1, 1, -1)
+	v2 := vec.NewVec3(1, 1, -1)
+	tri := NewTriangle("tri1", *v0, *v1, *v2, color.RGBA{0, 0, 0, 1}, 1, 1, true)
+
+	ray := cam.Ray{"", "camera", *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, -1)}
+
+	is_hit, _, _, _, _ := tri.Intersects(&ray)
+
+	if is_hit == true {
+		t.Error("Triangle should not have hit")
 	}
 }

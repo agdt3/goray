@@ -5,6 +5,7 @@ import (
 
 	"github.com/agdt3/goray/cam"
 	"github.com/agdt3/goray/obj"
+	"github.com/agdt3/goray/read"
 	"github.com/agdt3/goray/vec"
 	//"github.com/agdt3/goray/track"
 	"image"
@@ -16,6 +17,7 @@ import (
 )
 
 const INF_DIST float64 = 100000
+const MESH_FILE_PATH string = "./meshes/test.mesh"
 
 type CollisionStats struct {
 	Successes uint
@@ -359,6 +361,8 @@ func BlendColors(c1, c2 color.RGBA, t float64) color.RGBA {
 }
 
 func main() {
+
+	read.ReadMeshFile(MESH_FILE_PATH)
 	world := NewWorld()
 	world.MakeObjects()
 	world.MakeLights()
