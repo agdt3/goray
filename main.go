@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/agdt3/goray/cam"
+	"github.com/agdt3/goray/files"
 	"github.com/agdt3/goray/obj"
-	"github.com/agdt3/goray/read"
 	"github.com/agdt3/goray/vec"
 	//"github.com/agdt3/goray/track"
 	"image"
@@ -18,7 +18,7 @@ import (
 
 const (
 	INF_DIST       float64 = 100000
-	MESH_FILE_PATH string  = "./meshes/pentagon.mesh"
+	MESH_FILE_PATH string  = "./resources/meshes/pentagon.mesh"
 )
 
 type CollisionStats struct {
@@ -74,7 +74,7 @@ func (w *World) MakeObjects() {
 		triangle1 := obj.NewTriangle("Tri1", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1, false)
 	*/
 	poly := &obj.PolygonMesh{}
-	err := read.ReadMeshFile(MESH_FILE_PATH, poly)
+	err := files.ReadMeshFile(MESH_FILE_PATH, poly)
 	if err != nil {
 		fmt.Println(err)
 	}
