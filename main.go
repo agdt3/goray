@@ -16,8 +16,10 @@ import (
 	"os"
 )
 
-const INF_DIST float64 = 100000
-const MESH_FILE_PATH string = "./meshes/test.mesh"
+const (
+	INF_DIST       float64 = 100000
+	MESH_FILE_PATH string  = "./meshes/pentagon.mesh"
+)
 
 type CollisionStats struct {
 	Successes uint
@@ -57,22 +59,37 @@ func NewWorld() *World {
 
 func (w *World) MakeObjects() {
 	// spheres
-	center1 := vec.NewVec3(0, 0.5, -4)
-	center2 := vec.NewVec3(3, 0, -7)
-	sphere1 := obj.Sphere{"Sphere1", *center1, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
-	sphere2 := obj.Sphere{"Sphere2", *center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
+	/*
+		center1 := vec.NewVec3(0, 0.5, -4)
+		center2 := vec.NewVec3(3, 0, -7)
+		sphere1 := obj.Sphere{"Sphere1", *center1, 1, color.RGBA{0, 0, 255, 1}, 1, 1.2}
+		sphere2 := obj.Sphere{"Sphere2", *center2, 1, color.RGBA{0, 255, 0, 1}, 1, 1.2}
+	*/
 
 	// triangles
-	v0 := vec.NewVec3(0, -1, -3)
-	v1 := vec.NewVec3(1, 1, -3)
-	v2 := vec.NewVec3(-1, 1, -3)
-	triangle1 := obj.NewTriangle("Tri1", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1, false)
+	/*
+		v0 := vec.NewVec3(0, -1, -3)
+		v1 := vec.NewVec3(1, 1, -3)
+		v2 := vec.NewVec3(-1, 1, -3)
+		triangle1 := obj.NewTriangle("Tri1", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1, false)
+	*/
+	poly := &obj.PolygonMesh{}
+	err := read.ReadMeshFile(MESH_FILE_PATH, poly)
+	if err != nil {
+		fmt.Println(err)
+	}
+	triangles := obj.ConvertPolygon(poly)
 
 	// Slice of objects, 0 values, 3 capacity
-	w.Objects = make([]obj.Object, 0, 3)
-	w.Objects = append(w.Objects, obj.Object(sphere1))
-	w.Objects = append(w.Objects, obj.Object(sphere2))
-	w.Objects = append(w.Objects, obj.Object(triangle1))
+	capacity := len(triangles)
+	w.Objects = make([]obj.Object, 0, capacity)
+
+	//w.Objects = append(w.Objects, obj.Object(sphere1))
+	//w.Objects = append(w.Objects, obj.Object(sphere2))
+	for i, _ := range triangles {
+		w.Objects = append(w.Objects, obj.Object(&triangles[i]))
+	}
+	//w.Objects = append(w.Objects, obj.Object(triangle1))
 }
 
 func (w *World) MakeLights() {
@@ -361,8 +378,6 @@ func BlendColors(c1, c2 color.RGBA, t float64) color.RGBA {
 }
 
 func main() {
-
-	read.ReadMeshFile(MESH_FILE_PATH)
 	world := NewWorld()
 	world.MakeObjects()
 	world.MakeLights()

@@ -3,9 +3,10 @@ package track
 import (
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/agdt3/goray/cam"
 	"github.com/agdt3/goray/obj"
-	"strings"
 )
 
 type RayTreeNode struct {
@@ -57,7 +58,6 @@ func (t *RayTree) AddRoot(x, y int, px, py float64, ray *cam.Ray) {
 		children,
 	}
 
-	//fmt.Printf("Add Root %p %v\n", &node, node)
 	t.Children = append(t.Children, node)
 	t.NodeCount += 1
 }
@@ -90,8 +90,6 @@ func (t *RayTree) AddNode(ray, parentray *cam.Ray, parentobj, hitobj obj.Object)
 		node.ObjHitId = ""
 	}
 
-	//fmt.Printf("Add Node %p %v \n", &node, node)
-	//fmt.Printf("To Parent %p %v \n", &parent, parent)
 	node.Parent = parent
 	parent.Children = append(parent.Children, *node)
 	t.NodeCount += 1

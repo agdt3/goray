@@ -8,19 +8,23 @@ import (
 	"github.com/agdt3/goray/vec"
 )
 
+// Object is the base interface to a number of other
+// objects including Sphere and Triangle
 type Object interface {
-	GetId() string
+	GetID() string
 	GetColor() color.RGBA
 	GetRefractiveIndex() float64
 	Intersects(*cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64)
 }
 
+// FalseObject returns a failure-state object
 func FalseObject() (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	return false, *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, 0), 0, 0
 }
 
+// Sphere object
 type Sphere struct {
-	Id              string
+	ID              string
 	Center          vec.Vec3
 	Radius          float64
 	Col             color.RGBA
@@ -108,10 +112,11 @@ func (s Sphere) GetRefractiveIndex() float64 {
 	return s.RefractiveIndex
 }
 
-func (s Sphere) GetId() string {
-	return s.Id
+func (s Sphere) GetID() string {
+	return s.ID
 }
 
+// Light is a basic spherical light
 // TODO: Ironically, Light does not fit the Object interface
 type Light struct {
 	Type         string //point, directional, etc
@@ -172,7 +177,7 @@ func (l *Light) Intersects(ray *cam.Ray) (bool, float64) {
 }
 
 type Triangle struct {
-	Id              string
+	ID              string
 	V0              vec.Vec3
 	V1              vec.Vec3
 	V2              vec.Vec3
@@ -191,7 +196,7 @@ type Triangle struct {
 func NewTriangle(id string, v0, v1, v2 vec.Vec3, col color.RGBA, easing, refractive float64, culling bool) *Triangle {
 	t := new(Triangle)
 
-	t.Id = id
+	t.ID = id
 	t.Col = col
 	t.EasingDistance = easing
 	t.RefractiveIndex = refractive
@@ -217,8 +222,8 @@ func NewTriangle(id string, v0, v1, v2 vec.Vec3, col color.RGBA, easing, refract
 	return t
 }
 
-func (t *Triangle) GetId() string {
-	return t.Id
+func (t *Triangle) GetID() string {
+	return t.ID
 }
 
 func (t *Triangle) GetColor() color.RGBA {
@@ -373,4 +378,52 @@ func (t *Triangle) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, 
 
 	// Note that may have dist < t0
 	return true, P, t.N, t0, t0
+}
+
+// PolygonMesh is a container for mesh polygon data
+// and is not a true object
+type PolygonMesh struct {
+	NumFaces       []int
+	NumVerticies   []int
+	VertexIndecies []int
+	Verticies      []float64
+	VertexNormals  []float64
+}
+
+// ConvertPolygon takes a Polygon struct and
+// converts it into an array of triangles
+func ConvertPolygon(p *PolygonMesh) []Triangle {
+	var vertexIndex int
+	numTriangles := p.NumVerticies[0] - 2
+	triangles := make([]Triangle, numTriangles, numTriangles)
+
+	// TODO: Convert to work with all faces
+	for i := 0; i < p.NumFaces[0]; i++ {
+		for j := 0; j < numTriangles; j++ {
+			vertexIndexOffset := j * 3
+
+			vertexIndex = p.VertexIndecies[vertexIndexOffset] * 3
+			v0 := vec.NewVec3(
+				p.Verticies[vertexIndex],
+				p.Verticies[vertexIndex+1],
+				p.Verticies[vertexIndex+2])
+
+			vertexIndex = p.VertexIndecies[vertexIndexOffset+1] * 3
+			v1 := vec.NewVec3(
+				p.Verticies[vertexIndex],
+				p.Verticies[vertexIndex+1],
+				p.Verticies[vertexIndex+2])
+
+			vertexIndex = p.VertexIndecies[vertexIndexOffset+2] * 3
+			v2 := vec.NewVec3(
+				p.Verticies[vertexIndex],
+				p.Verticies[vertexIndex+1],
+				p.Verticies[vertexIndex+2])
+
+			triangle := NewTriangle("", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1, true)
+			triangles[j] = *triangle
+		}
+	}
+
+	return triangles
 }
