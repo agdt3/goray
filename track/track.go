@@ -50,7 +50,7 @@ func (t *RayTree) AddRoot(x, y int, px, py float64, ray *cam.Ray) {
 		y,
 		px,
 		py,
-		ray.Id,
+		ray.ID,
 		"",
 		"",
 		ray.Type,
@@ -63,7 +63,7 @@ func (t *RayTree) AddRoot(x, y int, px, py float64, ray *cam.Ray) {
 }
 
 func (t *RayTree) AddNode(ray, parentray *cam.Ray, parentobj, hitobj obj.Object) {
-	parent := t.FindNodeByRayId(parentray.Id)
+	parent := t.FindNodeByRayId(parentray.ID)
 	if parent == nil {
 		// TODO: Turn this into an error? or use nil on parent pointer
 		fmt.Println("Could not find parent node. Cannot add current node")
@@ -75,17 +75,17 @@ func (t *RayTree) AddNode(ray, parentray *cam.Ray, parentobj, hitobj obj.Object)
 	node.Y = parent.Y
 	node.PixelX = parent.PixelX
 	node.PixelY = parent.PixelY
-	node.RayId = ray.Id
+	node.RayId = ray.ID
 	node.RayType = ray.Type
 
 	if parentobj != nil {
-		node.ObjEmitId = parentobj.GetId()
+		node.ObjEmitId = parentobj.GetID()
 	} else {
 		node.ObjEmitId = ""
 	}
 
 	if hitobj != nil {
-		node.ObjHitId = hitobj.GetId()
+		node.ObjHitId = hitobj.GetID()
 	} else {
 		node.ObjHitId = ""
 	}
@@ -143,7 +143,7 @@ func (t *RayTree) FindRootByPixel(x, y int) *RayTreeNode {
 func (t *RayTree) GetSubTreeString(ray *cam.Ray, verbosity int) (string, error) {
 	// 0 = Lowest
 	// 3 = Highest TODO: Implement
-	node := t.FindNodeByRayId(ray.Id)
+	node := t.FindNodeByRayId(ray.ID)
 	if node == nil {
 		return "", errors.New("Starting node could not be found")
 	}

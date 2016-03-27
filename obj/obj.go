@@ -1,8 +1,10 @@
 package obj
 
 import (
+	"fmt"
 	"image/color"
 	"math"
+	"time"
 
 	"github.com/agdt3/goray/cam"
 	"github.com/agdt3/goray/vec"
@@ -32,6 +34,8 @@ type Sphere struct {
 	RefractiveIndex float64
 }
 
+// Intersects checks for intersections with sphere using
+// geometric method
 func (s Sphere) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	sc := s.Center
 	rd := ray.Direction
@@ -40,14 +44,14 @@ func (s Sphere) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, flo
 	srsq := s.Radius * s.Radius
 	oc := vec.Subtract(sc, ray.Origin)
 	l2oc := vec.Dot(oc, oc)
-	t_ca := vec.Dot(oc, rd)
+	tCa := vec.Dot(oc, rd)
 
 	//sphere located behind ray origin
-	if t_ca < 0 {
+	if tCa < 0 {
 		return false, *vec.NewVec3(0, 0, 0), *vec.NewVec3(0, 0, 0), 0, 0
 	}
 
-	d2 := l2oc - (t_ca * t_ca)
+	d2 := l2oc - (tCa * tCa)
 
 	// if the distance between the closest point to the sphere center on
 	// the projected ray is greater than the radius, then the projected
@@ -76,8 +80,8 @@ func (s Sphere) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, flo
 	*/
 
 	thc := math.Sqrt(t2hc)
-	t0 := t_ca - thc
-	t1 := t_ca + thc
+	t0 := tCa - thc
+	t1 := tCa + thc
 
 	// Sphere is behind the point of origin
 	if t0 < 0 && t1 < 0 {
@@ -104,14 +108,19 @@ func (s Sphere) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, flo
 	return true, hit, n, t0, t1
 }
 
+// GetColor is the object specific method to return the color
+// as color.RGBA
 func (s Sphere) GetColor() color.RGBA {
 	return s.Col
 }
 
+// GetRefractiveIndex is the object specific method to return the
+// refractive index
 func (s Sphere) GetRefractiveIndex() float64 {
 	return s.RefractiveIndex
 }
 
+// GetID is the object specific method to return the ID of the sphere
 func (s Sphere) GetID() string {
 	return s.ID
 }
@@ -126,20 +135,22 @@ type Light struct {
 	Col          color.RGBA
 }
 
+// Intersects checks for intersections between cam.Ray and Sphere-like
+// light, using the geometric method
 func (l *Light) Intersects(ray *cam.Ray) (bool, float64) {
 	rd := ray.Direction
 	rd.Normalize()
 
 	oc := vec.Subtract(l.Center, ray.Origin)
 	l2oc := vec.Dot(oc, oc)
-	t_ca := vec.Dot(oc, rd)
+	tCa := vec.Dot(oc, rd)
 
 	//sphere located behind ray origin
-	if t_ca < 0 {
+	if tCa < 0 {
 		return false, 0
 	}
 
-	d2 := l2oc - (t_ca * t_ca)
+	d2 := l2oc - (tCa * tCa)
 
 	// if the distance between the closest point to the sphere center on
 	// the projected ray is greater than the radius, then the projected
@@ -155,8 +166,8 @@ func (l *Light) Intersects(ray *cam.Ray) (bool, float64) {
 	}
 
 	thc := math.Sqrt(t2hc)
-	t0 := t_ca - thc
-	t1 := t_ca + thc
+	t0 := tCa - thc
+	t1 := tCa + thc
 
 	// Sphere is behind the point of origin
 	if t0 < 0 && t1 < 0 {
@@ -176,6 +187,7 @@ func (l *Light) Intersects(ray *cam.Ray) (bool, float64) {
 	return true, t0
 }
 
+// Triangle is fundamental container for the most basic renderable shape
 type Triangle struct {
 	ID              string
 	V0              vec.Vec3
@@ -193,6 +205,7 @@ type Triangle struct {
 	Culling         bool
 }
 
+// NewTriangle is a constructor for Triangles and precomputed values
 func NewTriangle(id string, v0, v1, v2 vec.Vec3, col color.RGBA, easing, refractive float64, culling bool) *Triangle {
 	t := new(Triangle)
 
@@ -222,18 +235,25 @@ func NewTriangle(id string, v0, v1, v2 vec.Vec3, col color.RGBA, easing, refract
 	return t
 }
 
+// GetID is the object specific method to return the ID of the sphere
 func (t *Triangle) GetID() string {
 	return t.ID
 }
 
+// GetColor is the object specific method to return the color
+// as color.RGBA
 func (t *Triangle) GetColor() color.RGBA {
 	return t.Col
 }
 
+// GetRefractiveIndex is the object specific method to return the
+// refractive index
 func (t *Triangle) GetRefractiveIndex() float64 {
 	return t.RefractiveIndex
 }
 
+// IntersectsImplicit checks for intersections between a ray the triangle
+// using the implicit method
 // TODO: Dead code
 func (t *Triangle) IntersectsImplicit(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	// This is the geometric solution
@@ -282,6 +302,8 @@ func (t *Triangle) IntersectsImplicit(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, f
 	return true, P, t.N, t0, t0
 }
 
+// IntersectsBarycentric checks for intersections between a ray the triangle
+// using the barycentric method
 // TODO: Dead code
 func (t *Triangle) IntersectsBarycentric(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	TOLERANCE := 0.001
@@ -340,6 +362,8 @@ func (t *Triangle) IntersectsBarycentric(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3
 	return true, P, t.N, t0, t0
 }
 
+// Intersects checks for intersections between a ray the triangle
+// using the Trombole-Muller method
 func (t *Triangle) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, float64) {
 	TOLERANCE := 0.001
 	dir := ray.Direction
@@ -348,7 +372,7 @@ func (t *Triangle) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, 
 	/* Trombole-Muller */
 	pvec := vec.Cross(dir, t.v0v2)
 	denominator := vec.Dot(pvec, t.v0v1)
-	inv_denominator := 1 / denominator
+	invDenominator := 1 / denominator
 
 	if t.Culling && (denominator < TOLERANCE) {
 		return FalseObject()
@@ -359,18 +383,18 @@ func (t *Triangle) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, 
 	tvec := vec.Subtract(ray.Origin, t.V0)
 	qvec := vec.Cross(tvec, t.v0v1)
 
-	u := vec.Dot(pvec, tvec) * inv_denominator
+	u := vec.Dot(pvec, tvec) * invDenominator
 	if u < 0 || u > 1 {
 		return FalseObject()
 	}
 
-	v := vec.Dot(qvec, dir) * inv_denominator
+	v := vec.Dot(qvec, dir) * invDenominator
 	if v < 0 || u+v > 1 {
 		return FalseObject()
 	}
 
 	// (t0, u, v) as opposed to (t, u, v)
-	t0 := vec.Dot(qvec, t.v0v2) * inv_denominator
+	t0 := vec.Dot(qvec, t.v0v2) * invDenominator
 
 	dist := t.EasingDistance * t0
 	dir.Multiply(dist)
@@ -390,40 +414,152 @@ type PolygonMesh struct {
 	VertexNormals  []float64
 }
 
-// ConvertPolygon takes a Polygon struct and
-// converts it into an array of triangles
-func ConvertPolygon(p *PolygonMesh) []Triangle {
+// ConvertPolygonSerial converts data in PolygonMesh
+// into an array of triangles using a serial strategy
+func (p *PolygonMesh) ConvertPolygonSerial() []Triangle {
+	start := time.Now()
+
 	var vertexIndex int
-	numTriangles := p.NumVerticies[0] - 2
-	triangles := make([]Triangle, numTriangles, numTriangles)
+	var numTriangles int
 
-	// TODO: Convert to work with all faces
+	totalTriangles := 0
+	for _, v := range p.NumVerticies {
+		totalTriangles += (v - 2)
+	}
+
+	triangles := make([]Triangle, totalTriangles, totalTriangles)
+
+	// TODO: Parallelize
+	indexIntoVertexIndex := 0
+	triangleIndex := 0
 	for i := 0; i < p.NumFaces[0]; i++ {
+		numTriangles = p.NumVerticies[i] - 2
 		for j := 0; j < numTriangles; j++ {
-			vertexIndexOffset := j * 3
-
-			vertexIndex = p.VertexIndecies[vertexIndexOffset] * 3
+			vertexIndex = p.VertexIndecies[indexIntoVertexIndex] * 3
 			v0 := vec.NewVec3(
 				p.Verticies[vertexIndex],
 				p.Verticies[vertexIndex+1],
 				p.Verticies[vertexIndex+2])
 
-			vertexIndex = p.VertexIndecies[vertexIndexOffset+1] * 3
+			vertexIndex = p.VertexIndecies[indexIntoVertexIndex+1] * 3
 			v1 := vec.NewVec3(
 				p.Verticies[vertexIndex],
 				p.Verticies[vertexIndex+1],
 				p.Verticies[vertexIndex+2])
 
-			vertexIndex = p.VertexIndecies[vertexIndexOffset+2] * 3
+			vertexIndex = p.VertexIndecies[indexIntoVertexIndex+2] * 3
 			v2 := vec.NewVec3(
 				p.Verticies[vertexIndex],
 				p.Verticies[vertexIndex+1],
 				p.Verticies[vertexIndex+2])
 
-			triangle := NewTriangle("", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1, true)
-			triangles[j] = *triangle
+			// TODO: Remove test color
+			red := uint8(0)
+			green := uint8(0)
+			blue := uint8(0)
+			if i == 0 || i == 3 {
+				red = uint8(255 / (j + 1))
+			}
+			if i == 1 || i == 4 {
+				green = uint8(255 / (j + 1))
+			}
+			if i == 2 || i == 5 {
+				blue = uint8(255 / (j + 1))
+			}
+
+			triangle := NewTriangle("", *v0, *v1, *v2, color.RGBA{red, green, blue, 1}, 1, 1, false)
+			triangles[triangleIndex] = *triangle
+
+			// Increment our various indecies
+			indexIntoVertexIndex += 3
+			triangleIndex++
+		}
+	}
+	elapsed := time.Since(start)
+	fmt.Println(elapsed)
+	return triangles
+}
+
+// ConvertPolygonParallel converts data in PolygonMesh
+// into an array of triangles using a parallel strategy
+func (p *PolygonMesh) ConvertPolygonParallel() []Triangle {
+	start := time.Now()
+
+	totalTriangles := 0
+	for _, v := range p.NumVerticies {
+		totalTriangles += (v - 2)
+	}
+
+	// Create slice
+	triangles := make([]Triangle, 0, totalTriangles)
+
+	// Create channel queue
+	trianglesChan := make(chan *Triangle, totalTriangles)
+
+	indexIntoVertexIndex := 0
+	for i := 0; i < p.NumFaces[0]; i++ {
+		numTriangles := p.NumVerticies[i] - 2
+		for j := 0; j < numTriangles; j++ {
+
+			go p.generateTriangle(i, j, indexIntoVertexIndex, trianglesChan)
+
+			// Increment our various indecies
+			indexIntoVertexIndex += 3
 		}
 	}
 
+	for k := 0; k < totalTriangles; k++ {
+		triangles = append(triangles, *<-trianglesChan)
+	}
+	//fmt.Println(triangles)
+	elapsed := time.Since(start)
+	fmt.Println(elapsed)
 	return triangles
+}
+
+func (p *PolygonMesh) generateTriangle(i, j, indexIntoVertexIndex int, trianglesChan chan *Triangle) {
+	var vertexIndex int
+	vertexIndex = p.VertexIndecies[indexIntoVertexIndex] * 3
+	v0 := vec.NewVec3(
+		p.Verticies[vertexIndex],
+		p.Verticies[vertexIndex+1],
+		p.Verticies[vertexIndex+2])
+
+	vertexIndex = p.VertexIndecies[indexIntoVertexIndex+1] * 3
+	v1 := vec.NewVec3(
+		p.Verticies[vertexIndex],
+		p.Verticies[vertexIndex+1],
+		p.Verticies[vertexIndex+2])
+
+	vertexIndex = p.VertexIndecies[indexIntoVertexIndex+2] * 3
+	v2 := vec.NewVec3(
+		p.Verticies[vertexIndex],
+		p.Verticies[vertexIndex+1],
+		p.Verticies[vertexIndex+2])
+
+	// TODO: Remove test color
+	red := uint8(0)
+	green := uint8(0)
+	blue := uint8(0)
+	if i == 0 || i == 3 {
+		red = uint8(255 / (j + 1))
+	}
+	if i == 1 || i == 4 {
+		green = uint8(255 / (j + 1))
+	}
+	if i == 2 || i == 5 {
+		blue = uint8(255 / (j + 1))
+	}
+
+	trianglesChan <- NewTriangle("", *v0, *v1, *v2, color.RGBA{red, green, blue, 1}, 1, 1, false)
+}
+
+// String stringifies triangles
+func (t *Triangle) String() string {
+	return fmt.Sprintf(
+		"V0: %v, %v, %v - V1: %v, %v, %v - V2: %v, %v, %v\nN: %v, %v, %v\n",
+		t.V0.X, t.V0.Y, t.V0.Z,
+		t.V1.X, t.V1.Y, t.V1.Z,
+		t.V2.X, t.V2.Y, t.V2.Z,
+		t.N.X, t.N.Y, t.N.Z)
 }

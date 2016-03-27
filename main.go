@@ -18,7 +18,8 @@ import (
 
 const (
 	INF_DIST       float64 = 100000
-	MESH_FILE_PATH string  = "./resources/meshes/pentagon.mesh"
+	MESH_FILE_PATH string  = "./res/meshes/cube.mesh"
+	IMG_FILE_PATH  string  = "./test.jpg"
 )
 
 type CollisionStats struct {
@@ -78,7 +79,10 @@ func (w *World) MakeObjects() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	triangles := obj.ConvertPolygon(poly)
+	// NOTE: This currently runs faster than the parallel version
+	// possibly due to overhead costs of cross-thread communication
+	// Check at higher volumes if this is still the case
+	triangles := poly.ConvertPolygonSerial()
 
 	// Slice of objects, 0 values, 3 capacity
 	capacity := len(triangles)
@@ -86,6 +90,10 @@ func (w *World) MakeObjects() {
 
 	//w.Objects = append(w.Objects, obj.Object(sphere1))
 	//w.Objects = append(w.Objects, obj.Object(sphere2))
+
+	// This may be a very costly waste
+	// One way to optimize is to use pure Triangle type, instead of
+	// casting to Objects
 	for i, _ := range triangles {
 		w.Objects = append(w.Objects, obj.Object(&triangles[i]))
 	}
@@ -335,7 +343,7 @@ func (w *World) Trace() {
 	}
 
 	// TODO: Export to separate function
-	f, err := os.Create("./test.jpg")
+	f, err := os.Create(IMG_FILE_PATH)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -378,6 +386,10 @@ func BlendColors(c1, c2 color.RGBA, t float64) color.RGBA {
 }
 
 func main() {
+	//nCPU := runtime.NumCPU()
+	//runtime.GOMAXPROCS(nCPU)
+	//fmt.Println("Number of CPUs: ", nCPU)
+
 	world := NewWorld()
 	world.MakeObjects()
 	world.MakeLights()
