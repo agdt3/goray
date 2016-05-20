@@ -17,9 +17,10 @@ import (
 )
 
 const (
-	INF_DIST       float64 = 100000
-	MESH_FILE_PATH string  = "./res/meshes/cube.mesh"
-	IMG_FILE_PATH  string  = "./test.jpg"
+	INF_DIST float64 = 100000
+	//MESH_FILE_PATH string  = "./res/meshes/cow.mesh"
+	MESH_FILE_PATH string = "./res/meshes/cube.mesh"
+	IMG_FILE_PATH  string = "./test.jpg"
 )
 
 type CollisionStats struct {
@@ -83,6 +84,7 @@ func (w *World) MakeObjects() {
 	// possibly due to overhead costs of cross-thread communication
 	// Check at higher volumes if this is still the case
 	triangles := poly.ConvertPolygonSerial()
+	//triangles := poly.ConvertPolygonParallel()
 
 	// Slice of objects, 0 values, 3 capacity
 	capacity := len(triangles)
