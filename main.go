@@ -20,6 +20,7 @@ const (
 	INF_DIST float64 = 100000
 	//MESH_FILE_PATH string  = "./res/meshes/cow.mesh"
 	MESH_FILE_PATH string = "./res/meshes/cube.mesh"
+	WAV_FILE_PATH  string = "./files/test_files/test12.obj"
 	IMG_FILE_PATH  string = "./test.jpg"
 )
 
@@ -75,8 +76,9 @@ func (w *World) MakeObjects() {
 		v2 := vec.NewVec3(-1, 1, -3)
 		triangle1 := obj.NewTriangle("Tri1", *v0, *v1, *v2, color.RGBA{255, 0, 0, 1}, 1, 1, false)
 	*/
-	poly := &obj.PolygonMesh{}
-	err := files.ReadMeshFile(MESH_FILE_PATH, poly)
+	poly := obj.MakePolygonMesh()
+	//err := files.ReadMeshFile(MESH_FILE_PATH, poly)
+	err := files.ReadWavFile(WAV_FILE_PATH, poly)
 	if err != nil {
 		fmt.Println(err)
 	}

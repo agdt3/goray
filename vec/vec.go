@@ -26,14 +26,14 @@ func NewVec3(x, y, z float64) *Vec3 {
 }
 
 // Add adds one vector to calling vector
-func (v *Vec3) Add(v2 Vec3) {
+func (v *Vec3) Add(v2 *Vec3) {
 	v.X += v2.X
 	v.Y += v2.Y
 	v.Z += v2.Z
 }
 
 // Subtract subtracts one vector from calling vector
-func (v *Vec3) Subtract(v2 Vec3) {
+func (v *Vec3) Subtract(v2 *Vec3) {
 	v.X -= v2.X
 	v.Y -= v2.Y
 	v.Z -= v2.Z

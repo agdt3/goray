@@ -234,13 +234,26 @@ func TestMatFloat64MultiplyIdentity(t *testing.T) {
 	}
 }
 
-func TestMatFloat64Multiply33(t *testing.T) {
+func TestMatFloat64Multiply33By33(t *testing.T) {
 	t.Parallel()
 
 	m1 := (setupMatricies()).m33
 	m2 := (setupMatricies()).m33
 	m3, _ := Multiply(m1, m2)
 	m4 := NewMatrixFloat64(3, 3, []float64{30, 36, 42, 66, 81, 96, 102, 126, 150})
+
+	if !IsEqual(m3, m4, 0.1) {
+		t.Error("m3 and m4 should be equal")
+	}
+}
+
+func TestMatFloat64Multiply23By32(t *testing.T) {
+	t.Parallel()
+
+	m1 := (setupMatricies()).m23
+	m2 := (setupMatricies()).m32
+	m3, _ := Multiply(m1, m2)
+	m4 := NewMatrixFloat64(2, 2, []float64{22, 28, 49, 64})
 
 	if !IsEqual(m3, m4, 0.1) {
 		t.Error("m3 and m4 should be equal")

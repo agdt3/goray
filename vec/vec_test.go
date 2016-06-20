@@ -1,8 +1,6 @@
 package vec
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestNewVec3(t *testing.T) {
 	t.Parallel()
@@ -14,6 +12,28 @@ func TestNewVec3(t *testing.T) {
 
 	if v3.Magnitude != 9 {
 		t.Error("Vector magnitude was not calculated correctly")
+	}
+}
+
+func TestAdd(t *testing.T) {
+	t.Parallel()
+	v1 := NewVec3(1, 2, 3)
+	v2 := NewVec3(4, 5, 6)
+
+	v1.Add(v2)
+	if v1.X != 5 || v1.Y != 7 || v1.Z != 9 {
+		t.Error("Vector sum is incorrect")
+	}
+}
+
+func TestSubtract(t *testing.T) {
+	t.Parallel()
+	v1 := NewVec3(1, 1, 1)
+	v2 := NewVec3(4, 5, 6)
+
+	v2.Subtract(v1)
+	if v2.X != 3 || v2.Y != 4 || v2.Z != 5 {
+		t.Error("Vector difference is incorrect")
 	}
 }
 

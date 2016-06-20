@@ -58,12 +58,22 @@ func (m *MatrixFloat64) calculateDeterminant() {
 	}
 }
 
-func calculateDet2x2(val []float64) float64 {
+func calculateDet2(val []float64) float64 {
 	return val[0]*val[3] - val[1]*val[2]
 }
 
-func calculateDet(multiplier float64, submatrix []float64) {
+/*
+1 2 3 4 5
+1 2 3 4 5
+1 2 3 4 5
+1 2 3 4 5
+1 2 3 4 5
+*/
+
+func calculateDetN(multiplier float64, submatrix []float64) {
+	// break matrix into sub-matricies to calculate the value
 	// TODO: Finish this
+	//numSubmatricies = 0
 }
 
 // Get returns value of matrix at row i, column j (indexed at 0)

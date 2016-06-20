@@ -407,11 +407,20 @@ func (t *Triangle) Intersects(ray *cam.Ray) (bool, vec.Vec3, vec.Vec3, float64, 
 // PolygonMesh is a container for mesh polygon data
 // and is not a true object
 type PolygonMesh struct {
-	NumFaces       []int
-	NumVerticies   []int
-	VertexIndecies []int
-	Verticies      []float64
-	VertexNormals  []float64
+	NumFaces         []int
+	NumVerticies     []int
+	VertexIndecies   []int
+	Verticies        []float64
+	VertexNormals    []float64
+	TextureVertecies []float64
+}
+
+// MakePolygonMesh sets up mesh container
+func MakePolygonMesh() *PolygonMesh {
+	poly := new(PolygonMesh)
+	poly.NumFaces = make([]int, 1, 1)
+
+	return poly
 }
 
 // ConvertPolygonSerial converts data in PolygonMesh
@@ -429,7 +438,6 @@ func (p *PolygonMesh) ConvertPolygonSerial() []Triangle {
 
 	triangles := make([]Triangle, totalTriangles, totalTriangles)
 
-	// TODO: Parallelize
 	indexIntoVertexIndex := 0
 	triangleIndex := 0
 	for i := 0; i < p.NumFaces[0]; i++ {
